@@ -1,0 +1,35 @@
+name: Portfolio verification
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run test:static
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: portfolio-browser-evidence
+          path: |
+            public/media/*-screen.png
+            docs/*.png
+            test-results/
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: static-portfolio
+          path: out/

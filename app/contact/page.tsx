@@ -1,0 +1,2 @@
+import {route} from '../../lib/projects';
+export default function Contact(){return <main id="main" className="info"><a href={route('/')}>← Selected work</a><span className="eyebrow">CONTACT / TAMPA, FLORIDA</span><h1>Let's make<br/>something<br/>matter<span>.</span></h1><p>Open to UI/UX design, product design, interaction design and creative frontend opportunities.</p><a className="text-link" href="https://github.com/SheikhRobinEmon-USF">Connect on GitHub ↗</a></main>}
