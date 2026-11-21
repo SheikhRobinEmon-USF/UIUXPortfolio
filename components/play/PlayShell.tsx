@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ComponentType } from "react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "motion/react";
 import { type Project, route } from "../../lib/projects";
@@ -37,8 +37,22 @@ function useClock() {
 
 function StatusBar() {
   const time = useClock();
+  const ref = useRef<HTMLDivElement>(null);
+  // The app decides the status-bar ink (light over photos and dark themes).
+  useEffect(() => {
+    const id = setInterval(() => {
+      const el = ref.current;
+      const app = el?.parentElement?.querySelector<HTMLElement>(".ph-app");
+      if (!el || !app) return;
+      const ink = getComputedStyle(app).getPropertyValue("--status-ink").trim();
+      el.style.color = ink || "#111";
+      const home = el.parentElement?.querySelector<HTMLElement>(".phone-home");
+      if (home) home.style.background = ink || "#111";
+    }, 250);
+    return () => clearInterval(id);
+  }, []);
   return (
-    <div className="phone-status" aria-hidden="true">
+    <div className="phone-status" aria-hidden="true" ref={ref}>
       <span>{time}</span>
       <span className="phone-island" />
       <span className="phone-status-icons">
