@@ -201,6 +201,6 @@ export function projectArtwork(slug: string) {
   const width = ["finance", "food", "stays"].includes(slug) ? 762 : 881;
   return {
     src,
-    srcSet: `${asset(slug + "-mobile.webp")} 460w, ${src} ${width}w`,
+    srcSet: `${asset(slug + "-mobile.webp")} 460w, ${asset(slug + "-tablet.webp")} 680w, ${src} ${width}w`,
   };
 }

@@ -55,3 +55,4 @@ The ChatGPT Sites manifest deploys the `out/` export. Optional `NEXT_PUBLIC_BASE
 - [Reference analysis](REFERENCE_ANALYSIS.md)
 - [Design systems](DESIGN_SYSTEM.md)
 - [Project status](PROJECT_STATUS.md)
+- [Validation results and captures](docs/VALIDATION.md)

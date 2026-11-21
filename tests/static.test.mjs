@@ -19,6 +19,7 @@ test("all intended static routes exist and reference working links", () => {
     assert.ok(playHtml.includes("Reset demo data"));
     assert.ok(fs.existsSync(`out/media/${slug}.webp`));
     assert.ok(fs.existsSync(`out/media/${slug}-mobile.webp`));
+    assert.ok(fs.existsSync(`out/media/${slug}-tablet.webp`));
     for (const view of ["screen", "detail"]) {
       const file = `${slug}-${view}.jpg`;
       assert.ok(

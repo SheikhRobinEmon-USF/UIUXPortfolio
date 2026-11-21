@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { asset, type Project } from "../../lib/projects";
+import { projectArtwork, type Project } from "../../lib/projects";
 import { useLocal, money, today } from "./demo-state";
 type Entry = {
   id: string;
@@ -811,7 +811,12 @@ export default function Ledger({
         className={`ledger-heading ${health && screen === "Today" ? "wellness-cover" : ""}`}
       >
         {health && screen === "Today" && (
-          <img src={asset("health.webp")} alt="" />
+          <img
+            {...projectArtwork("health")}
+            sizes="(max-width: 780px) 74vw, 59vw"
+            alt=""
+            fetchPriority="high"
+          />
         )}
         <div>
           <span className="kicker">
