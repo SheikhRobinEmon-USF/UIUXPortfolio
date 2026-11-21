@@ -68,7 +68,27 @@ try {
   await page
     .getByRole("heading", { name: "The Green Table", exact: true })
     .waitFor();
-  await setTimeout(700);
+  await setTimeout(550);
+  await page.getByRole("button", { name: /Customize/ }).first().hover();
+  await setTimeout(550);
+  await page.goto(`${base}/play/ecommerce/`);
+  const card = page.locator(".catalog-results .product-card").first();
+  await card.scrollIntoViewIfNeeded();
+  await setTimeout(450);
+  await card.hover();
+  await setTimeout(600);
+  await card.getByRole("button", { name: /^Save/ }).click();
+  await setTimeout(500);
+  await page.goto(`${base}/play/health/`);
+  await page.locator(".trend-panel").scrollIntoViewIfNeeded();
+  await page.getByRole("button", { name: /2026-11-18, 37 min/ }).click();
+  await setTimeout(500);
+  await page.getByRole("button", { name: /2026-11-21, 28 min/ }).click();
+  await page.locator(".wellness-timeline").scrollIntoViewIfNeeded();
+  await page.locator(".ledger-entry").first().hover();
+  await setTimeout(750);
+  await page.locator(".ledger-entry").first().getByRole("button", { name: "Edit" }).click();
+  await setTimeout(750);
   await context.close();
   await video.saveAs("docs/project-transitions.webm");
 } finally {

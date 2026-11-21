@@ -148,8 +148,8 @@ export default function Home() {
     if (Math.abs(x) > 0.5 || Math.abs(y) > 0.5) return;
     cancelAnimationFrame(previewFrame.current);
     previewFrame.current = requestAnimationFrame(() => {
-      current.style.setProperty("--look-x", `${x * -15}px`);
-      current.style.setProperty("--look-y", `${y * -12}px`);
+      current.style.setProperty("--look-x", `${x * -34}px`);
+      current.style.setProperty("--look-y", `${y * -26}px`);
       current.style.setProperty("--light-x", `${(x + 0.5) * 100}%`);
       current.style.setProperty("--light-y", `${(y + 0.5) * 100}%`);
     });

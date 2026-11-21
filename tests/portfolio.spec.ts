@@ -10,7 +10,7 @@ const projects = {
   food: "FOOD",
   stays: "STAYS",
 } as const;
-const widths = [320, 375, 430, 768, 1024, 1440, 1920];
+const widths = [320, 375, 390, 430, 768, 1024, 1440, 1920];
 const names = Object.keys(projects) as (keyof typeof projects)[];
 
 const button = (page: Page, name: string | RegExp) =>
@@ -43,7 +43,7 @@ const screenshot = async (page: Page, path: string) => {
 
 async function responsive(page: Page, route: string) {
   for (const width of widths) {
-    await page.setViewportSize({ width, height: 900 });
+    await page.setViewportSize({ width, height: width < 500 ? 812 : 900 });
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth + 1,
@@ -102,7 +102,9 @@ test("home selector, navigation, responsive layouts and reduced motion", async (
   await expect(button(page, /SOCIAL/)).toHaveAttribute("aria-current", "true");
   await link(page, "About").click();
   await expect(page).toHaveURL("/about/");
+  await responsive(page, "About");
   await page.goto("/contact/");
+  await responsive(page, "Connect");
   await expect(page.getByText("United States", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: /Email/ })).toHaveAttribute(
     "href",
@@ -129,6 +131,16 @@ for (const slug of names) {
     await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
     await screenshot(page, `public/media/${slug}-screen.jpg`);
     await responsive(page, `/play/${slug}/`);
+    const navigation = page.getByRole("navigation");
+    const labels = await navigation.getByRole("button").allTextContents();
+    await page.setViewportSize({ width: 320, height: 660 });
+    for (const name of labels) {
+      const tab = navigation.getByRole("button", { name, exact: true });
+      await tab.click();
+      await expect(tab).toHaveAttribute("aria-current", "page");
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(321);
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
     const firstTab = page.getByRole("navigation").getByRole("button").first();
     await firstTab.focus();
     await page.keyboard.press("Enter");
@@ -149,9 +161,12 @@ test("ATELIER variants, gallery, empty bag, validation, delivery, promo and orde
   await button(page, "Browse").click();
   await button(page, "Living").click();
   await expect(page.getByText("2 results", { exact: true })).toBeVisible();
-  await page.getByLabel("Search").fill("not a product");
+  await button(page, "Clear Living filter").click();
+  await expect(page.getByText("4 results", { exact: true })).toBeVisible();
+  await page.getByRole("searchbox", { name: "Search", exact: true }).fill("not a product");
   await expect(page.getByText("No matches")).toBeVisible();
-  await page.getByLabel("Search").fill("Forma");
+  await button(page, "Clear search filter").click();
+  await page.getByRole("searchbox", { name: "Search", exact: true }).fill("Forma");
   await button(page, "Forma chair").click();
   await expect(
     page.getByRole("heading", { name: "Forma chair" }),
@@ -303,6 +318,7 @@ test("VITAL dated wellness entries, validation, habits, journal and reset", asyn
     page.getByRole("progressbar", { name: "Daily movement goal" }),
   ).toHaveAttribute("value", "28");
   await button(page, /2026-11-18, 37 min/).click();
+  await expect(page.locator(".trend-heading output")).toContainText("37 min");
   await expect(page.getByLabel("Date", { exact: true })).toHaveValue(
     "2026-11-18",
   );
@@ -331,6 +347,52 @@ test("VITAL dated wellness entries, validation, habits, journal and reset", asyn
   await expect(page.getByText("1/4", { exact: true })).toBeVisible();
   await reset(page);
   await expect(page.getByText("0/4", { exact: true })).toBeVisible();
+});
+
+test("VITAL timeline values and actions align on desktop and fit on phones", async ({ page }) => {
+  await page.goto("/play/health/");
+  const rows = page.locator(".wellness-timeline .ledger-entry");
+  await expect(rows).toHaveCount(3);
+  for (const width of [1920, 1440, 768, 390, 320]) {
+    await page.setViewportSize({ width, height: 820 });
+    const bounds = await rows.evaluateAll((entries) => entries.map((entry) => {
+      const value = entry.querySelector(".entry-value")!.getBoundingClientRect();
+      const actions = entry.querySelector(".entry-actions")!.getBoundingClientRect();
+      const edit = entry.querySelector(".entry-actions button")!.getBoundingClientRect();
+      return { valueRight: value.right, actionsRight: actions.right, editWidth: edit.width, editHeight: edit.height };
+    }));
+    for (const row of bounds) {
+      expect(row.valueRight).toBeCloseTo(bounds[0].valueRight, 1);
+      expect(row.actionsRight).toBeCloseTo(bounds[0].actionsRight, 1);
+      expect(row.actionsRight).toBeLessThan(width);
+      expect(row.editWidth).toBeGreaterThanOrEqual(44);
+      expect(row.editHeight).toBeGreaterThanOrEqual(44);
+    }
+  }
+  await rows.first().getByRole("button", { name: "Edit" }).click();
+  await expect(page.getByRole("heading", { name: "Edit entry" })).toBeVisible();
+  await expect(page.getByLabel("Name")).toHaveValue("Morning walk");
+});
+
+test("demo hover, press and screen motion respond to the reduced motion setting", async ({ page }) => {
+  await page.goto("/play/ecommerce/");
+  const card = page.locator(".catalog-results .product-card").first();
+  await card.hover();
+  await expect(card).toHaveCSS("translate", "0px -4px");
+  await expect(card.locator("img")).toHaveCSS("transform", "matrix(1.085, 0, 0, 1.085, 0, 0)");
+  const save = card.getByRole("button", { name: /^Save/ });
+  await save.click();
+  await expect(save).toHaveAttribute("aria-pressed", "true");
+  await expect(save).toHaveCSS("animation-name", "state-confirmation");
+  await button(page, "Browse").click();
+  expect(await page.locator(".app-content").evaluate((element) => element.getAnimations().length)).toBeGreaterThan(0);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(card).toHaveCSS("transition-duration", "0s");
+  await card.hover();
+  await expect(card).toHaveCSS("translate", "none");
+  await expect(card.locator("img")).toHaveCSS("transform", "none");
+  await button(page, "Wishlist").click();
+  expect(await page.locator(".app-content").evaluate((element) => element.getAnimations().length)).toBe(0);
 });
 
 test("MONETA filters, edits, empty transactions, budget persistence and a local transfer", async ({
@@ -419,12 +481,12 @@ test("ROAM map/list, no matches, invalid dates, booking and trip management", as
   await button(page, "Browse").click();
   await page.getByLabel("Search").fill("Atlantis");
   await expect(page.getByText("No matches")).toBeVisible();
-  await page.getByLabel("Search").fill("");
+  await button(page, "Clear search filter").click();
   await expect(
     page.getByText("$343.00").filter({ hasText: "total for 2 nights" }),
   ).toBeVisible();
   await button(page, "Map + list").click();
-  await button(page, /Stillwater Loft, \$/).click();
+  await button(page, /Stillwater Loft, \$[\d.]+ total for 2 nights/).click();
   await expect(button(page, "Stillwater Loft")).toBeFocused();
   await expect(button(page, /Stillwater Loft, \$/)).toHaveAttribute(
     "aria-pressed",
