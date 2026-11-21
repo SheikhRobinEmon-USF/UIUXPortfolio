@@ -68,8 +68,8 @@ export default function Prototype({ project: p }: { project: Project }) {
 
     const animation = content.current?.animate(
       [
-        { opacity: 0.55, translate: "0 18px" },
-        { opacity: 1, translate: "0 0" },
+        { translate: "0 18px" },
+        { translate: "0 0" },
       ],
       { duration: 420, easing: "cubic-bezier(.22,.78,.16,1)" },
     );
