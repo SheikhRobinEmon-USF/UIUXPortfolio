@@ -290,7 +290,8 @@ export function Segmented<T extends string>({
 }: {
   options: readonly (NoInfer<T> | { value: NoInfer<T>; label: ReactNode })[];
   value: T;
-  onChange: (v: T) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onChange: (v: any) => void;
   label: string;
   className?: string;
 }) {

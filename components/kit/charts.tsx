@@ -208,7 +208,7 @@ export function Rings({
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={label} className="kit-rings">
       {rings.map((r, i) => {
-        const radius = size / 2 - width / 2 - i * (width + 4);
+        const radius = size / 2 - width / 2 - i * (width + Math.max(1, width * 0.3));
         const c = 2 * Math.PI * radius;
         return (
           <g key={i} transform={`rotate(-90 ${size / 2} ${size / 2})`}>
