@@ -25,3 +25,7 @@
 ## Reproduction
 
 Run `npm ci`, `npm run build`, `npm run test:static`, and `npm test` after installing Playwright Chromium. The browser suite captures portfolio documentation images. Rebuild the static export to incorporate new captures. Use `npm run audit` for repeatable lab metrics. Source and hosting settings live in this repository, with `.openai/hosting.json` identifying the owner-private Sites project.
+
+## Interaction and demo revision
+
+The project gallery now follows wheel intent and touch displacement, coordinates its active marker and artwork, and carries artwork and titles between case studies. The Connect page uses United States and links to the publicly verified email, LinkedIn and GitHub profiles. The seven demos apply distinct research-backed workflows documented in [product design research](docs/PRODUCT_DESIGN_RESEARCH.md).

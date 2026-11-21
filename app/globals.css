@@ -991,3 +991,280 @@ img {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Project artwork, navigation and case transitions share one motion rhythm. */
+.portfolio {
+  --deck-settle: cubic-bezier(0.22, 0.78, 0.16, 1);
+  background-color: color-mix(in srgb, var(--project, #d7c5a9) 9%, #111110);
+  transition: background-color 640ms var(--deck-settle);
+}
+
+.preview {
+  transform: translate3d(
+      calc(var(--offset) * -1.7%),
+      calc(var(--offset) * 89%),
+      0
+    )
+    rotateZ(calc(var(--offset) * -2.1deg)) rotateX(calc(var(--offset) * -19deg))
+    scale(calc(1 - var(--distance) * 0.085));
+  transition:
+    transform 640ms var(--deck-settle),
+    opacity 400ms ease,
+    visibility 640ms;
+}
+.preview.adjacent {
+  opacity: 0.48;
+}
+.preview img {
+  transition: transform 540ms var(--deck-settle);
+}
+@media (hover: hover) and (pointer: fine) {
+  .preview.current:hover img {
+    transform: translate3d(var(--look-x, 0px), var(--look-y, 0px), 0)
+      scale(1.055);
+  }
+  .preview.current::before {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    content: "";
+    pointer-events: none;
+    opacity: 0;
+    background: radial-gradient(
+      ellipse at var(--light-x, 50%) var(--light-y, 50%),
+      #fff3d42f,
+      transparent 63%
+    );
+    transition: opacity 300ms ease;
+  }
+  .preview.current:hover::before {
+    opacity: 1;
+  }
+}
+.preview-caption > span,
+.preview-caption strong {
+  transition:
+    opacity 260ms ease,
+    transform 420ms var(--deck-settle);
+}
+.preview:not(.current) .preview-caption > span {
+  opacity: 0;
+  transform: translateY(9px);
+}
+.preview:not(.current) .preview-caption strong {
+  opacity: 0;
+  transform: translateY(16px);
+}
+.preview-open {
+  transition:
+    color 200ms,
+    background 200ms,
+    transform 380ms var(--deck-settle);
+}
+.preview.current:is(:hover, :focus-visible) .preview-open {
+  transform: rotate(90deg);
+}
+.left-copy h1,
+.left-copy p {
+  animation: project-copy-in 360ms var(--deck-settle) both;
+}
+.left-copy p {
+  animation-delay: 38ms;
+}
+@keyframes project-copy-in {
+  from {
+    opacity: 0.55;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.project-menu-list {
+  position: relative;
+}
+.project-menu-marker {
+  position: absolute;
+  top: 0;
+  left: -12px;
+  width: 2px;
+  height: 44px;
+  background: var(--project);
+  transform: translateY(calc(var(--active-index) * 44px));
+  transition:
+    transform 460ms var(--deck-settle),
+    background-color 340ms;
+  pointer-events: none;
+}
+.project-menu button {
+  transition:
+    color 160ms,
+    background-color 280ms,
+    padding-inline 350ms var(--deck-settle);
+}
+.project-menu button:hover {
+  padding-inline-start: 8px;
+}
+.project-menu button[aria-current] {
+  background-color: color-mix(in srgb, var(--project) 8%, transparent);
+}
+
+.case-nav {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.case-scroll-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  pointer-events: none;
+  transform: scaleX(0);
+  transform-origin: left;
+  background: var(--paper);
+}
+@supports (animation-timeline: scroll()) {
+  .case-scroll-progress {
+    animation: case-progress linear both;
+    animation-timeline: scroll(root block);
+  }
+  @keyframes case-progress {
+    to {
+      transform: scaleX(1);
+    }
+  }
+}
+.case-intro h1,
+.preview.current .preview-caption strong {
+  view-transition-name: project-title;
+}
+[data-portfolio-transition="next"] .case-hero.hero-artwork,
+[data-portfolio-transition="next"] .case-intro h1 {
+  view-transition-name: none;
+}
+[data-portfolio-transition="next"] .next-case img {
+  view-transition-name: project-artwork;
+}
+[data-portfolio-transition="next"] .next-case strong {
+  view-transition-name: project-title;
+}
+::view-transition-group(project-title),
+::view-transition-group(project-artwork) {
+  animation-duration: 620ms;
+  animation-timing-function: cubic-bezier(0.22, 0.78, 0.16, 1);
+}
+.next-case {
+  overflow: hidden;
+  background: color-mix(in srgb, var(--ink) 54%, #111110);
+}
+.next-case img {
+  transition: transform 560ms cubic-bezier(0.22, 0.78, 0.16, 1);
+}
+.next-case:is(:hover, :focus-visible) img {
+  transform: scale(1.04);
+}
+@media (max-width: 800px) {
+  .stack {
+    perspective: 820px;
+  }
+  .preview {
+    inset-inline: 5%;
+    transform: translate3d(calc(var(--offset) * 97% + var(--drag, 0px)), 0, 0)
+      rotateY(calc(var(--offset) * -10deg))
+      scale(calc(1 - var(--distance) * 0.035));
+  }
+  .stack[data-dragging] .preview {
+    transition: none;
+  }
+  .project-menu-list {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+  }
+  .project-menu-marker {
+    display: none;
+  }
+  .project-menu button:hover {
+    padding-inline-start: 2px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .preview.current:is(:hover, :focus-visible) img,
+  .preview.current:is(:hover, :focus-visible) .preview-open,
+  .next-case:is(:hover, :focus-visible) img {
+    transform: none;
+  }
+}
+
+.contact-page .profile-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: clamp(28px, 8vw, 125px);
+  align-items: end;
+}
+.contact-page .profile-layout h1 {
+  font-size: clamp(64px, 12vw, 184px);
+}
+.contact-channels {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.contact-channels li {
+  border-top: 1px solid #4b4438;
+}
+.contact-channels li:last-child {
+  border-bottom: 1px solid #4b4438;
+}
+.contact-channels a {
+  display: grid;
+  gap: 6px;
+  padding: 17px 0;
+  transition:
+    color 190ms ease,
+    padding-inline 320ms cubic-bezier(0.22, 0.78, 0.16, 1);
+}
+.contact-channels a:hover {
+  color: #edcda7;
+  padding-inline-start: 8px;
+}
+.contact-channels span {
+  color: #b2aca0;
+  font: 0.75rem var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.contact-channels strong {
+  font-size: clamp(0.96rem, 2.1vw, 1.32rem);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 740px) {
+  .contact-page .profile-layout {
+    grid-template-columns: 1fr;
+    padding-block: 8vh;
+  }
+}
+
+@keyframes portfolio-page-away {
+  to {
+    opacity: 0;
+  }
+}
+html:has(.portfolio, .case)::view-transition-old(root) {
+  animation: portfolio-page-away 170ms ease-out both;
+  mix-blend-mode: normal;
+}
+html:has(.portfolio, .case)::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+@media (max-width: 800px) {
+  .project-step-icon {
+    display: inline-block;
+    transform: rotate(-90deg);
+  }
+}

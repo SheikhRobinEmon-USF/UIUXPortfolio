@@ -240,6 +240,33 @@ const media: Record<string, string> = {
   c: "orbit",
   d: "blue",
 };
+const stayFee = 35;
+const deliveryFee = 3.49;
+const addresses = ["120 Garden Lane", "18 Market Avenue"];
+const featureSynopsis =
+  "A quiet study of landscapes and the life hiding in them.";
+const deliverySteps = [
+  {
+    label: "Confirmed",
+    detail: "Your demo order has been accepted.",
+    estimate: "25–35 min",
+  },
+  {
+    label: "Preparing",
+    detail: "The kitchen is preparing your meal.",
+    estimate: "15–25 min",
+  },
+  {
+    label: "Out for delivery",
+    detail: "Your order is heading to the sample address.",
+    estimate: "5–10 min",
+  },
+  {
+    label: "Delivered",
+    detail: "Your simulated delivery is complete.",
+    estimate: "Complete",
+  },
+];
 const episodes = ["Opening", "Field notes", "Afterlight"];
 const day = 86_400_000;
 const capacity = (item: Item) =>
@@ -289,6 +316,8 @@ export default function Catalog({
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cardRefs = useRef<Record<string, HTMLElement | null>>({});
   const [query, Q] = useState("");
+  const [deliveryArea, setDeliveryArea] = useLocal(k + "delivery-area", "");
+  const [showPreview, setShowPreview] = useState(false);
   const [genre, G] = useState("All");
   const [sort, S] = useState("Featured");
   const [selected, Sel] = useState(items[0]);
@@ -334,7 +363,13 @@ export default function Catalog({
     ? selected.price * nights
     : (food ? selectedDish.price : selected.price) + extra;
   const subtotal = cart.reduce((sum, c) => sum + c.qty * c.price, 0);
-  const serviceFee = stay && cart.length ? 35 : food && cart.length ? 3.49 : 0;
+  const serviceFee = cart.length
+    ? stay
+      ? stayFee
+      : food
+        ? deliveryFee
+        : 0
+    : 0;
   const discount =
     p.slug === "ecommerce" && promo.trim().toUpperCase() === "DEMO10"
       ? subtotal * 0.1
@@ -359,6 +394,7 @@ export default function Catalog({
       V("Standard");
       Z("M");
       E(0);
+      setShowPreview(false);
       setDish(0);
       Photo(0);
       Zoom(false);
@@ -373,6 +409,15 @@ export default function Catalog({
       document.startViewTransition(() => flushSync(show));
     } else show();
   }
+  function resume(item: Item, part: number) {
+    Sel(item);
+    E(part);
+    updateViewing({
+      history: [item.id, ...viewing.history.filter((id) => id !== item.id)],
+    });
+    go("Player");
+  }
+
   function chooseProperty(item: Item, focusCard = false) {
     Sel(item);
     if (focusCard)
@@ -456,6 +501,7 @@ export default function Catalog({
         ? old.map((c) => (c.id === id ? { ...c, qty: c.qty + 1 } : c))
         : [...old, { id, name, price: unit, qty: 1, option }],
     );
+    if (food && deliveryArea) Address(deliveryArea);
     go(stay ? "Checkout" : food ? "Cart" : "Bag");
     notify("Added to your selection.");
   };
@@ -538,6 +584,7 @@ export default function Catalog({
           {art(i)}
         </button>
         <div className="product-info">
+          <span className="card-category">{i.cat}</span>
           <button className="plain-title" onClick={() => open(i)}>
             {i.name}
           </button>
@@ -550,7 +597,21 @@ export default function Catalog({
           >
             {visibleSaved.includes(i.id) ? "♥" : "♡"}
           </button>
-          <p>{i.desc}</p>
+          <p>
+            {food ? i.desc.split("·").slice(0, -1).join("·").trim() : i.desc}
+          </p>
+          {food && (
+            <div className="card-meta">
+              <span>{i.desc.split("·").at(-1)?.trim()} delivery</span>
+              <span>{money(deliveryFee)} delivery fee</span>
+            </div>
+          )}
+          {stream && (
+            <div className="card-meta">
+              <span>3 short episodes</span>
+              <span>Captions</span>
+            </div>
+          )}
           {stay && map && (
             <button
               className="map-show"
@@ -560,10 +621,20 @@ export default function Catalog({
               Show on map
             </button>
           )}
-          {!stream && (
-            <strong>
-              {money(i.price)}
-              {stay ? " / night" : ""}
+          {!stream && !food && (
+            <strong className="card-price">
+              {stay && nights >= 1 && nights <= 28 ? (
+                <>
+                  {money(i.price * nights + stayFee)}{" "}
+                  <small>
+                    total for {nights} {nights === 1 ? "night" : "nights"}
+                  </small>
+                </>
+              ) : (
+                <>
+                  {money(i.price)} {stay && <small>per night</small>}
+                </>
+              )}
             </strong>
           )}
         </div>
@@ -674,13 +745,18 @@ export default function Catalog({
               ))}
             </div>
           </div>
-          <div>
+          <div className="purchase-panel">
             <small className="kicker">{selected.cat}</small>
             <h1>{food ? selectedDish.name : selected.name}</h1>
             <p>{food ? selectedDish.description : selected.desc}</p>
             {stream ? (
               <>
-                <p>Original demo • 2026 • All ages</p>
+                <div className="card-meta">
+                  <span>Original short series</span>
+                  <span>2026</span>
+                  <span>All ages</span>
+                  <span>CC</span>
+                </div>
                 <label>
                   Episode
                   <select
@@ -714,7 +790,10 @@ export default function Catalog({
             ) : (
               <>
                 <h2>
-                  {money(unit)} {stay && `/ ${nights} nights`}
+                  {stay && nights > 0 ? money(unit + stayFee) : money(unit)}{" "}
+                  {stay &&
+                    nights > 0 &&
+                    `/ ${nights} ${nights === 1 ? "night" : "nights"}`}
                 </h2>
                 {stay ? (
                   <>
@@ -722,6 +801,9 @@ export default function Catalog({
                     <p>
                       {money(selected.price)} per night · up to{" "}
                       {capacity(selected)} guests
+                    </p>
+                    <p className="purchase-context">
+                      Includes a {money(stayFee)} cleaning fee for the stay.
                     </p>
                   </>
                 ) : (
@@ -740,6 +822,12 @@ export default function Catalog({
                         ))}
                       </select>
                     </label>
+                    {p.slug === "ecommerce" && (
+                      <p className="purchase-context">
+                        Standard shipping included. Express delivery adds $5 at
+                        checkout.
+                      </p>
+                    )}
                     {!food && (
                       <label>
                         Size
@@ -1018,8 +1106,9 @@ export default function Catalog({
                         onChange={(event) => Address(event.target.value)}
                       >
                         <option value="">Choose a sample address</option>
-                        <option>120 Garden Lane</option>
-                        <option>18 Market Avenue</option>
+                        {addresses.map((location) => (
+                          <option key={location}>{location}</option>
+                        ))}
                       </select>
                     </label>
                   ) : (
@@ -1081,6 +1170,14 @@ export default function Catalog({
         ) : (
           <>
             <p>Simulated status · {orders[0].id}</p>
+            <section className="panel tracking-status" aria-live="polite">
+              <p className="kicker">DELIVERY UPDATE</p>
+              <h2>{deliverySteps[track]?.label || deliverySteps[0].label}</h2>
+              <p>{deliverySteps[track]?.detail || deliverySteps[0].detail}</p>
+              <strong>
+                {deliverySteps[track]?.estimate || deliverySteps[0].estimate}
+              </strong>
+            </section>
             {orders[0].address && (
               <p>
                 Deliver to {orders[0].address}
@@ -1088,14 +1185,12 @@ export default function Catalog({
               </p>
             )}
             <div className="timeline">
-              {["Confirmed", "Preparing", "Out for delivery", "Delivered"].map(
-                (t, i) => (
-                  <div key={t} className={i <= track ? "done" : ""}>
-                    <span>{i <= track ? "✓" : i + 1}</span>
-                    {t}
-                  </div>
-                ),
-              )}
+              {deliverySteps.map(({ label: t }, i) => (
+                <div key={t} className={i <= track ? "done" : ""}>
+                  <span>{i <= track ? "✓" : i + 1}</span>
+                  {t}
+                </div>
+              ))}
             </div>
             <button
               className="action"
@@ -1147,86 +1242,236 @@ export default function Catalog({
           : empty("No completed orders")}
       </section>
     );
+  const landing = screen === "Home" || screen === "Discover";
+  const categories = ["All", ...new Set(items.map((item) => item.cat))];
+  const title = stream
+    ? "Browse titles"
+    : food
+      ? "Restaurants near you"
+      : stay
+        ? "Find your next stay"
+        : "Shop the collection";
+  const browse = stream
+    ? "Explore the collection"
+    : food
+      ? "Restaurants near you"
+      : stay
+        ? "Handpicked stays"
+        : "The considered collection";
+  const searchField = (
+    <label>
+      {stay && <span aria-hidden="true">Where to?</span>}
+      {!stay && <span>Search</span>}
+      <input
+        type="search"
+        aria-label="Search"
+        placeholder={
+          stay
+            ? "City, region or stay"
+            : stream
+              ? "Title or genre"
+              : food
+                ? "Restaurant, dish or cuisine"
+                : "Products or materials"
+        }
+        value={query}
+        onChange={(event) => Q(event.target.value)}
+      />
+    </label>
+  );
   return (
-    <section>
-      {["Home", "Discover"].includes(screen) && (
-        <div className="catalog-hero">
+    <section className="catalog-experience">
+      {food && (
+        <div className="delivery-context">
+          <div>
+            <span className="kicker">YOUR DELIVERY AREA</span>
+            <strong>{deliveryArea || "Choose a demo address"}</strong>
+          </div>
+          <label>
+            <span className="sr-only">Delivery area</span>
+            <select
+              aria-label="Delivery area"
+              value={deliveryArea}
+              onChange={(event) => setDeliveryArea(event.target.value)}
+            >
+              <option value="">Select address</option>
+              {addresses.map((location) => (
+                <option key={location}>{location}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
+      {landing && (
+        <div
+          className={`catalog-hero discovery-hero ${stream ? "film-feature" : food ? "delivery-feature" : stay ? "stay-feature" : "shop-feature"}`}
+        >
           <div>
             <span className="kicker">
               {stream
-                ? "CURATED FOR " + profile.toUpperCase()
+                ? "FRAME ORIGINALS"
                 : food
-                  ? "YOUR NEIGHBORHOOD, DELIVERED"
+                  ? "NEIGHBORHOOD DELIVERY"
                   : stay
-                    ? "FIND YOUR NEXT ESCAPE"
-                    : "THE EVERYDAY EDIT · 01"}
+                    ? "SLOW TRAVEL"
+                    : "THE EVERYDAY EDIT"}
             </span>
-            <h1>{p.line}</h1>
+            <h1>{stream ? items[0].name : p.line}</h1>
             <p>
               {stream
-                ? "A small, considered catalog of original short visual studies."
+                ? featureSynopsis
                 : food
-                  ? "Order from a handful of neighborhood kitchens."
+                  ? "Browse local menus, make it yours and follow your order home."
                   : stay
-                    ? "Find cabins, lofts and hideaways worth slowing down for."
-                    : "A considered collection of furniture and everyday objects."}
+                    ? "Find cabins, lofts and quieter places to land."
+                    : "Furniture and objects chosen for the everyday."}
             </p>
-            <button className="action" onClick={() => open(items[0], false)}>
-              {stream
-                ? "Explore featured title"
-                : stay
-                  ? "Explore this stay"
-                  : food
-                    ? "Discover the menu"
-                    : "Shop the collection"}{" "}
-            </button>
+            {stream && (
+              <div className="card-meta">
+                <span>Nature</span>
+                <span>3 short episodes</span>
+                <span>All ages</span>
+              </div>
+            )}
+            <div className="discovery-actions">
+              <button className="action" onClick={() => open(items[0], false)}>
+                {stream
+                  ? "Explore featured title"
+                  : stay
+                    ? "Explore this stay"
+                    : food
+                      ? "Discover the menu"
+                      : "Shop the collection"}
+              </button>
+              {stream && (
+                <button
+                  className="outline"
+                  aria-expanded={showPreview}
+                  onClick={() => setShowPreview((value) => !value)}
+                >
+                  {showPreview ? "Close preview" : "Preview"}
+                </button>
+              )}
+              {p.slug === "ecommerce" && (
+                <button className="outline" onClick={() => go("Browse")}>
+                  Browse all
+                </button>
+              )}
+            </div>
           </div>
           <img
-            {...projectArtwork(p.slug)}
+            {...projectArtwork(stream ? "stays" : p.slug)}
             sizes="(max-width: 800px) 90vw, 52vw"
             alt=""
             fetchPriority="high"
           />
         </div>
       )}
-      <div className="section-heading">
-        <h2>
-          {stream
-            ? "Explore the collection"
-            : food
-              ? "Restaurants near you"
-              : stay
-                ? "Handpicked stays"
-                : "The considered collection"}
-        </h2>
-        <span>
+      {!landing && <h1 className="catalog-browse-title">{title}</h1>}
+      {stream && landing && showPreview && (
+        <section className="film-preview" aria-label="Featured title preview">
+          <h2>The Quiet Earth preview</h2>
+          <video
+            controls
+            playsInline
+            preload="metadata"
+            src={asset("earth-0.mp4")}
+            poster={asset(photos.earth)}
+          >
+            <track
+              kind="captions"
+              label="English"
+              srcLang="en"
+              src={asset("earth-0.vtt")}
+            />
+          </video>
+        </section>
+      )}
+      {stream &&
+        landing &&
+        items.some((item) =>
+          episodes.some(
+            (_, part) => (viewing.progress[`${item.id}:${part}`] || 0) > 0,
+          ),
+        ) && (
+          <section
+            className="resume-rail"
+            aria-label="Continue watching titles"
+          >
+            <h2>Continue watching</h2>
+            <div className="product-grid film-shelf">
+              {items.map((item) => {
+                const part = episodes.findIndex(
+                  (_, index) =>
+                    (viewing.progress[`${item.id}:${index}`] || 0) > 0,
+                );
+                if (part < 0) return null;
+                return (
+                  <button
+                    className="resume-card"
+                    key={item.id}
+                    onClick={() => resume(item, part)}
+                  >
+                    <img src={asset(photos[item.art])} alt="" loading="lazy" />
+                    <span>{item.name}</span>
+                    <small>{episodes[part]} · Resume</small>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+      {stay && (
+        <div className="stay-search">
+          {searchField}
+          {tripFields()}
+        </div>
+      )}
+      {!stay && (
+        <div
+          className="collection-facets"
+          aria-label={food ? "Cuisines" : stream ? "Genres" : "Departments"}
+        >
+          {categories.map((category) => (
+            <button
+              key={category}
+              aria-pressed={genre === category}
+              onClick={() => G(category)}
+            >
+              {category === "All"
+                ? food
+                  ? "All cuisines"
+                  : stream
+                    ? "All genres"
+                    : "All products"
+                : category}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="section-heading collection-heading">
+        <h2>{browse}</h2>
+        <span aria-live="polite">
           {filtered.length} {filtered.length === 1 ? "result" : "results"}
         </span>
       </div>
-      {stay && tripFields()}
-      <div className="filters">
-        <label>
-          Search
-          <input
-            placeholder={
-              stay ? "Destination" : stream ? "Titles" : "Search collection"
-            }
-            value={query}
-            onChange={(e) => Q(e.target.value)}
-          />
-        </label>
-        <label>
-          Category
-          <select value={genre} onChange={(e) => G(e.target.value)}>
-            {["All", ...new Set(items.map((i) => i.cat))].map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-          </select>
-        </label>
+      <div className="filters collection-filters">
+        {!stay && searchField}
+        {stay && (
+          <label>
+            Area
+            <select value={genre} onChange={(event) => G(event.target.value)}>
+              {categories.map((category) => (
+                <option key={category}>{category}</option>
+              ))}
+            </select>
+          </label>
+        )}
         {!stream && (
           <label>
             Sort
-            <select value={sort} onChange={(e) => S(e.target.value)}>
+            <select value={sort} onChange={(event) => S(event.target.value)}>
               <option>Featured</option>
               <option>Price: low to high</option>
               <option>Price: high to low</option>
@@ -1289,12 +1534,18 @@ export default function Catalog({
         {!filtered.length ? (
           empty("No matches")
         ) : (
-          <div className={stream ? "product-grid film-shelf" : "product-grid"}>
+          <div
+            className={
+              stream
+                ? "product-grid film-shelf catalog-results"
+                : "product-grid catalog-results"
+            }
+          >
             {filtered.map(card)}
           </div>
         )}
       </div>
-      {stream && screen === "Home" && (
+      {stream && landing && genre === "All" && !query && (
         <>
           <h2>Documentaries</h2>
           <div className="product-grid film-shelf">

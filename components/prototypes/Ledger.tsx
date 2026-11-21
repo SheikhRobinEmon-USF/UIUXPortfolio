@@ -25,6 +25,7 @@ const wellnessReference: Record<string, number> = {
   Nutrition: 2200,
 };
 const day = 86_400_000;
+const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 function relativeDate(iso: string, days: number) {
   return new Date(Date.parse(iso || today) + days * day)
     .toISOString()
@@ -805,8 +806,41 @@ export default function Ledger({
         </div>
       </section>
     );
+  const overview = screen === "Today" || screen === "Overview";
+  const trendEnd =
+    health && date >= relativeDate(today, -6) && date <= today
+      ? today
+      : periodEnd;
+  const trendDays = Array.from({ length: 7 }, (_, index) =>
+    relativeDate(trendEnd, index - 6),
+  );
+  const currentMetric = health
+    ? category === "All"
+      ? "Activity"
+      : category
+    : category;
+  const dailyTotals = new Map<string, number>();
+  for (const entry of entries) {
+    if (currentMetric === "All" || entry.category === currentMetric) {
+      dailyTotals.set(
+        entry.date,
+        (dailyTotals.get(entry.date) ?? 0) + entry.amount,
+      );
+    }
+  }
+  const trendValues = trendDays.map((day) => dailyTotals.get(day) ?? 0);
+  const highest = Math.max(...trendValues, 1);
+  const directlyLogged = entries
+    .filter((entry) => entry.date === date && entry.category === "Activity")
+    .reduce((sum, entry) => sum + entry.amount, 0);
+  const dailyGoal = goals[0]?.amount || wellnessReference.Activity;
+  const remaining =
+    Object.values(budgets).reduce((sum, amount) => sum + amount, 0) -
+    monthExpenses.reduce((sum, entry) => sum + entry.amount, 0);
   return (
-    <section>
+    <section
+      className={`ledger-experience ${overview ? "ledger-overview" : ""}`}
+    >
       <div
         className={`ledger-heading ${health && screen === "Today" ? "wellness-cover" : ""}`}
       >
@@ -824,9 +858,9 @@ export default function Ledger({
           </span>
           <h1>
             {screen === "Today"
-              ? "Good morning, Robin."
+              ? "Your health today"
               : screen === "Overview"
-                ? "Your money, in focus."
+                ? "Money overview"
                 : screen}
           </h1>
           <p>
@@ -862,6 +896,52 @@ export default function Ledger({
           </label>
         )}
       </div>
+      {overview &&
+        (health ? (
+          <div className="wellness-today">
+            <section className="panel wellness-goal">
+              <div>
+                <p className="kicker">MOVEMENT</p>
+                <h2>
+                  {directlyLogged} <small>of {dailyGoal} min</small>
+                </h2>
+                <p>Activity logged on this day</p>
+              </div>
+              <progress
+                value={Math.min(directlyLogged, dailyGoal)}
+                max={dailyGoal}
+                aria-label="Daily movement goal"
+              />
+            </section>
+            <section className="panel wellness-actions">
+              <h2>Log a check-in</h2>
+              <div>
+                <button onClick={() => go("Activity")}>Log activity</button>
+                <button onClick={() => go("Sleep")}>Log sleep</button>
+                <button onClick={() => go("Nutrition")}>Log nutrition</button>
+              </div>
+            </section>
+          </div>
+        ) : (
+          <section
+            className="finance-balances"
+            aria-label="Account balance and spending summary"
+          >
+            <div>
+              <p className="kicker">AVAILABLE BALANCE</p>
+              <h2>{money(checking + savings)}</h2>
+              <button onClick={() => go("Accounts")}>View accounts</button>
+            </div>
+            <div>
+              <p className="kicker">SPENDING · {range.toUpperCase()}</p>
+              <strong>{money(total)}</strong>
+            </div>
+            <div>
+              <p className="kicker">MONTHLY BUDGET LEFT</p>
+              <strong>{money(remaining)}</strong>
+            </div>
+          </section>
+        ))}
       <div className="stat-grid">
         {cats.map((c) => (
           <button
@@ -893,6 +973,61 @@ export default function Ledger({
           </button>
         ))}
       </div>
+      <section className="panel trend-panel" aria-labelledby="trend-title">
+        <div className="trend-heading">
+          <div>
+            <p className="kicker">LAST 7 DAYS</p>
+            <h2 id="trend-title">
+              {health ? `${currentMetric} trend` : "Spending activity"}
+            </h2>
+          </div>
+          <p>{health ? units[currentMetric] : "USD"}</p>
+        </div>
+        <div className="trend-bars">
+          {trendDays.map((day, index) => {
+            const title = dayNames[new Date(day).getUTCDay()];
+            const display = health
+              ? `${trendValues[index]} ${units[currentMetric]}`
+              : money(trendValues[index]);
+            const bar = (
+              <>
+                <span className="trend-track" aria-hidden="true">
+                  <i
+                    style={
+                      {
+                        "--level": `${Math.max(3, (trendValues[index] / highest) * 100)}%`,
+                      } as React.CSSProperties
+                    }
+                  />
+                </span>
+                <span>{title}</span>
+              </>
+            );
+            return health ? (
+              <button
+                key={day}
+                aria-label={`${title} ${day}, ${display}`}
+                aria-pressed={date === day}
+                onClick={() => {
+                  D(day);
+                  R("Day");
+                }}
+              >
+                {bar}
+              </button>
+            ) : (
+              <div
+                key={day}
+                title={`${day}: ${display}`}
+                aria-label={`${title} ${day}, ${display}`}
+                role="img"
+              >
+                {bar}
+              </div>
+            );
+          })}
+        </div>
+      </section>
       <div className="ledger-grid">
         <div className="panel">
           <h2>{health ? "Daily rhythm" : "Spending breakdown"}</h2>
@@ -957,7 +1092,7 @@ export default function Ledger({
             : total
               ? `Your selected period includes ${current.length} transactions totaling ${money(total)}.`
               : "Your current filters have no transactions."}{" "}
-          Synthetic data; no professional advice.
+          Data in this preview is simulated.
         </p>
       )}
     </section>

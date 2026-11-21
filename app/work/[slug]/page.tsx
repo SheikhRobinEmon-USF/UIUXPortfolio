@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import PortfolioTransitions from "../../../components/PortfolioTransitions";
 import { caseStudies } from "../../../lib/case-studies";
 import { projects, route, asset, projectArtwork } from "../../../lib/projects";
 
@@ -46,7 +47,9 @@ export default async function Work({ params }: WorkProps) {
         } as React.CSSProperties
       }
     >
+      <PortfolioTransitions nextPath={route(`/work/${next.slug}/`)} />
       <header className="case-nav">
+        <div className="case-scroll-progress" aria-hidden="true" />
         <a href={workIndex}>Selected work</a>
         <a href={prototype}>Launch prototype</a>
       </header>
@@ -218,7 +221,8 @@ export default async function Work({ params }: WorkProps) {
         <small>Next project · {next.tag}</small>
         <strong>{next.name}.</strong>
         <img
-          src={asset(next.slug + ".webp")}
+          {...projectArtwork(next.slug)}
+          sizes="(max-width: 690px) 36vw, 28vw"
           alt=""
           width="720"
           height="360"

@@ -86,6 +86,9 @@ test("home selector, navigation, responsive layouts and reduced motion", async (
   await page.mouse.move(350, 450);
   await page.mouse.wheel(0, 150);
   await expect(button(page, /STAYS/)).toHaveAttribute("aria-current", "true");
+  await page.mouse.wheel(0, -90);
+  for (const delta of [-33, -24, -15, -7]) await page.mouse.wheel(0, delta);
+  await expect(button(page, /FOOD/)).toHaveAttribute("aria-current", "true");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(page.locator(".preview.current")).toHaveCSS(
     "transition-duration",
@@ -100,6 +103,15 @@ test("home selector, navigation, responsive layouts and reduced motion", async (
   await link(page, "About").click();
   await expect(page).toHaveURL("/about/");
   await page.goto("/contact/");
+  await expect(page.getByText("United States", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Email/ })).toHaveAttribute(
+    "href",
+    /^mailto:/,
+  );
+  await expect(page.getByRole("link", { name: /LinkedIn/ })).toHaveAttribute(
+    "href",
+    /linkedin\.com/,
+  );
   await expect(
     page.getByRole("link", { name: /Connect on GitHub/ }),
   ).toBeVisible();
@@ -135,6 +147,8 @@ test("ATELIER variants, gallery, empty bag, validation, delivery, promo and orde
   await button(page, "Bag").click();
   await expect(page.getByText("Your cart is empty")).toBeVisible();
   await button(page, "Browse").click();
+  await button(page, "Living").click();
+  await expect(page.getByText("2 results", { exact: true })).toBeVisible();
   await page.getByLabel("Search").fill("not a product");
   await expect(page.getByText("No matches")).toBeVisible();
   await page.getByLabel("Search").fill("Forma");
@@ -191,6 +205,9 @@ test("COMMON post composition, comments, local image, activity, profile and rese
   );
   await page.getByLabel("Caption").fill("A thoughtful demo post");
   await page
+    .getByRole("combobox", { name: "Post type" })
+    .selectOption("Question");
+  await page
     .getByRole("combobox", { name: "Community" })
     .selectOption("Photography");
   await page
@@ -203,6 +220,7 @@ test("COMMON post composition, comments, local image, activity, profile and rese
     .locator(".post")
     .filter({ hasText: "A thoughtful demo post" });
   await expect(card).toBeVisible();
+  await expect(card.getByText("Question", { exact: true })).toBeVisible();
   await card.getByRole("button", { name: "Save", exact: true }).click();
   await card.getByRole("button", { name: /Comments/ }).click();
   await page.getByLabel("Add comment").fill("This is a second thought.");
@@ -227,6 +245,13 @@ test("FRAME search, empty watchlist, viewer isolation, captions, actual playback
   page,
 }) => {
   await page.goto("/play/streaming/");
+  await button(page, "Preview").click();
+  await expect(
+    page
+      .getByRole("region", { name: "Featured title preview" })
+      .locator("video"),
+  ).toBeVisible();
+  await button(page, "Close preview").click();
   await button(page, "Watchlist").click();
   await expect(page.getByText("Your collection is empty")).toBeVisible();
   await button(page, "Browse").click();
@@ -274,6 +299,14 @@ test("VITAL dated wellness entries, validation, habits, journal and reset", asyn
   page,
 }) => {
   await page.goto("/play/health/");
+  await expect(
+    page.getByRole("progressbar", { name: "Daily movement goal" }),
+  ).toHaveAttribute("value", "28");
+  await button(page, /2026-11-18, 37 min/).click();
+  await expect(page.getByLabel("Date", { exact: true })).toHaveValue(
+    "2026-11-18",
+  );
+  await button(page, /2026-11-21, 28 min/).click();
   await button(page, "Track habits").click();
   await screenshot(page, "public/media/health-detail.jpg");
   await page.getByLabel("Drink water").check();
@@ -304,6 +337,9 @@ test("MONETA filters, edits, empty transactions, budget persistence and a local 
   page,
 }) => {
   await page.goto("/play/finance/");
+  await expect(
+    page.getByRole("region", { name: "Account balance and spending summary" }),
+  ).toBeVisible();
   await page.getByLabel("Range").selectOption("Week");
   await page.getByRole("combobox", { name: "Category" }).selectOption("Food");
   await expect(page.getByText(/Total spending \$/)).toBeVisible();
@@ -339,6 +375,9 @@ test("CRAVE meal extras, checkout validation, delivery tracking, persistence and
   await button(page, "Tracking").click();
   await expect(page.getByText("No active orders")).toBeVisible();
   await button(page, "Discover").click();
+  await page
+    .getByRole("combobox", { name: "Delivery area" })
+    .selectOption("18 Market Avenue");
   await button(page, "Discover the menu").click();
   await screenshot(page, "public/media/food-detail.jpg");
   await button(page, "Customize Harvest bowl").click();
@@ -349,9 +388,9 @@ test("CRAVE meal extras, checkout validation, delivery tracking, persistence and
   await button(page, "Confirm demo order").click();
   await expect(page.getByLabel("Email")).toBeFocused();
   await page.getByLabel("Email").fill("guest@example.com");
-  await page
-    .getByLabel("Demo delivery address")
-    .selectOption("18 Market Avenue");
+  await expect(page.getByLabel("Demo delivery address")).toHaveValue(
+    "18 Market Avenue",
+  );
   await page
     .getByLabel("Delivery instructions")
     .fill("Leave at the side door.");
@@ -362,6 +401,7 @@ test("CRAVE meal extras, checkout validation, delivery tracking, persistence and
   ).toBeVisible();
   await button(page, "Next simulated event").click();
   await expect(page.locator(".timeline .done")).toHaveCount(2);
+  await expect(page.getByRole("heading", { name: "Preparing" })).toBeVisible();
   await page.reload();
   await button(page, "Tracking").click();
   await expect(page.locator(".timeline .done")).toHaveCount(2);
@@ -380,6 +420,9 @@ test("ROAM map/list, no matches, invalid dates, booking and trip management", as
   await page.getByLabel("Search").fill("Atlantis");
   await expect(page.getByText("No matches")).toBeVisible();
   await page.getByLabel("Search").fill("");
+  await expect(
+    page.getByText("$343.00").filter({ hasText: "total for 2 nights" }),
+  ).toBeVisible();
   await button(page, "Map + list").click();
   await button(page, /Stillwater Loft, \$/).click();
   await expect(button(page, "Stillwater Loft")).toBeFocused();

@@ -6,7 +6,9 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
 } from "react";
+import PortfolioTransitions from "./PortfolioTransitions";
 import { projects, route, projectArtwork } from "../lib/projects";
 
 const pad = (number: number) => String(number).padStart(2, "0");
@@ -17,14 +19,19 @@ export default function Home() {
   const wheel = useRef({
     total: 0,
     time: 0,
-    changed: Number.NEGATIVE_INFINITY,
+    direction: 0,
+    magnitude: 0,
+    committed: false,
   });
   const touch = useRef<{
     x: number;
     y: number;
     time: number;
     href: string | null;
+    horizontal: boolean;
   } | null>(null);
+  const previewFrame = useRef(0);
+  const artwork = useRef<HTMLDivElement>(null);
   const project = projects[active];
 
   const select = useCallback((index: number) => {
@@ -70,26 +77,88 @@ export default function Home() {
 
   useEffect(() => {
     function onWheel(event: WheelEvent) {
-      if (event.ctrlKey || Math.abs(event.deltaY) < Math.abs(event.deltaX))
+      if (
+        event.ctrlKey ||
+        !event.deltaY ||
+        Math.abs(event.deltaY) < Math.abs(event.deltaX)
+      )
         return;
       const target = event.target as Element | null;
-      if (target?.closest?.(".portfolio-header, .home-footer")) return;
-      const now = performance.now();
-      if (now - wheel.current.time > 150) wheel.current.total = 0;
-      wheel.current.time = now;
-      wheel.current.total += event.deltaY * (event.deltaMode === 1 ? 16 : 1);
       if (
-        Math.abs(wheel.current.total) > 44 &&
-        now - wheel.current.changed > 470
-      ) {
-        select(active + Math.sign(wheel.current.total));
-        wheel.current.changed = now;
-        wheel.current.total = 0;
+        target?.closest?.(".portfolio-header, .home-footer") ||
+        window.innerWidth <= 800
+      )
+        return;
+
+      const now = performance.now();
+      const direction = Math.sign(event.deltaY);
+      const magnitude = Math.abs(
+        event.deltaY *
+          (event.deltaMode === 1
+            ? 16
+            : event.deltaMode === 2
+              ? innerHeight
+              : 1),
+      );
+      const gesture = wheel.current;
+      const idle = now - gesture.time;
+      const deliberateReversal =
+        direction !== gesture.direction && magnitude >= 12;
+      const newImpulse =
+        idle > 72 && magnitude > Math.max(28, gesture.magnitude * 1.85);
+      const slowingTail =
+        gesture.committed &&
+        direction === gesture.direction &&
+        idle < 320 &&
+        magnitude < gesture.magnitude * 0.78;
+      if ((idle > 155 && !slowingTail) || deliberateReversal || newImpulse) {
+        gesture.total = 0;
+        gesture.direction = direction;
+        gesture.committed = false;
+      }
+      gesture.time = now;
+      gesture.magnitude = magnitude;
+
+      if (gesture.committed || direction !== gesture.direction) return;
+      gesture.total += magnitude;
+      if (gesture.total >= 39) {
+        gesture.committed = true;
+        select(active + direction);
       }
     }
+
     window.addEventListener("wheel", onWheel, { passive: true });
     return () => window.removeEventListener("wheel", onWheel);
   }, [active, select]);
+
+  useEffect(() => () => cancelAnimationFrame(previewFrame.current), []);
+
+  function followPointer(event: ReactPointerEvent<HTMLDivElement>) {
+    if (
+      event.pointerType !== "mouse" ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    )
+      return;
+    const current =
+      event.currentTarget.querySelector<HTMLElement>(".preview.current");
+    if (!current) return;
+    const bounds = current.getBoundingClientRect();
+    const x = (event.clientX - bounds.left) / bounds.width - 0.5;
+    const y = (event.clientY - bounds.top) / bounds.height - 0.5;
+    if (Math.abs(x) > 0.5 || Math.abs(y) > 0.5) return;
+    cancelAnimationFrame(previewFrame.current);
+    previewFrame.current = requestAnimationFrame(() => {
+      current.style.setProperty("--look-x", `${x * -15}px`);
+      current.style.setProperty("--look-y", `${y * -12}px`);
+      current.style.setProperty("--light-x", `${(x + 0.5) * 100}%`);
+      current.style.setProperty("--light-y", `${(y + 0.5) * 100}%`);
+    });
+  }
+
+  function resetDrag() {
+    artwork.current?.removeAttribute("data-dragging");
+    artwork.current?.style.removeProperty("--drag");
+  }
 
   return (
     <main
@@ -97,6 +166,7 @@ export default function Home() {
       className="portfolio"
       style={{ "--project": project.color } as CSSProperties}
     >
+      <PortfolioTransitions />
       <header className="portfolio-header">
         <a href={route("/")} className="identity">
           <span className="identity-mark" aria-hidden="true">
@@ -108,7 +178,7 @@ export default function Home() {
         </a>
         <nav aria-label="Portfolio">
           <a href={route("/about/")}>About</a>
-          <a href={route("/contact/")}>Contact</a>
+          <a href={route("/contact/")}>Connect</a>
         </nav>
       </header>
 
@@ -122,7 +192,10 @@ export default function Home() {
 
         <div
           className="stack"
+          ref={artwork}
           aria-label="Project previews"
+          onPointerMove={followPointer}
+          onPointerLeave={() => cancelAnimationFrame(previewFrame.current)}
           onTouchStart={(event) => {
             if (event.touches.length !== 1) {
               touch.current = null;
@@ -133,22 +206,54 @@ export default function Home() {
               x: event.touches[0].clientX,
               y: event.touches[0].clientY,
               time: performance.now(),
+              horizontal: false,
               href:
                 target.closest<HTMLAnchorElement>(".preview.current")?.href ??
                 null,
             };
           }}
+          onTouchMove={(event) => {
+            const start = touch.current;
+            if (
+              !start ||
+              event.touches.length !== 1 ||
+              window.matchMedia("(prefers-reduced-motion: reduce)").matches
+            )
+              return;
+            const finger = event.touches[0];
+            const x = finger.clientX - start.x;
+            const y = finger.clientY - start.y;
+            start.horizontal ||=
+              Math.abs(x) > 9 && Math.abs(x) > Math.abs(y) * 1.25;
+            if (!start.horizontal) return;
+            const resistance =
+              (active === 0 && x > 0) || (active === lastIndex && x < 0)
+                ? 0.18
+                : 0.78;
+            event.currentTarget.dataset.dragging = "";
+            event.currentTarget.style.setProperty(
+              "--drag",
+              `${x * resistance}px`,
+            );
+          }}
           onTouchCancel={() => {
             touch.current = null;
+            resetDrag();
           }}
           onTouchEnd={(event) => {
             const start = touch.current;
             touch.current = null;
+            resetDrag();
             if (!start || event.touches.length) return;
             const end = event.changedTouches[0];
             const dx = start.x - end.clientX;
             const dy = start.y - end.clientY;
-            if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) {
+            const elapsed = performance.now() - start.time;
+            const flick = elapsed < 230 && Math.abs(dx) > 28;
+            if (
+              (Math.abs(dx) > 54 || flick) &&
+              Math.abs(dx) > Math.abs(dy) * 1.15
+            ) {
               event.preventDefault();
               select(active + Math.sign(dx));
               return;
@@ -212,19 +317,26 @@ export default function Home() {
           })}
         </div>
 
-        <nav className="project-menu" aria-label="Select project">
+        <nav
+          className="project-menu"
+          aria-label="Select project"
+          style={{ "--active-index": active } as CSSProperties}
+        >
           <span className="menu-heading">Project index</span>
-          {projects.map((item, index) => (
-            <button
-              key={item.slug}
-              onClick={() => select(index)}
-              aria-current={active === index ? "true" : undefined}
-            >
-              <span>{pad(index + 1)}</span>
-              {item.label}
-              <i />
-            </button>
-          ))}
+          <div className="project-menu-list">
+            <span className="project-menu-marker" aria-hidden="true" />
+            {projects.map((item, index) => (
+              <button
+                key={item.slug}
+                onClick={() => select(index)}
+                aria-current={active === index ? "true" : undefined}
+              >
+                <span>{pad(index + 1)}</span>
+                {item.label}
+                <i />
+              </button>
+            ))}
+          </div>
         </nav>
 
         <div className="left-copy" aria-live="polite">
@@ -232,7 +344,7 @@ export default function Home() {
             {project.name}
             <span>.</span>
           </h1>
-          <p>{project.line}</p>
+          <p key={`${project.slug}-summary`}>{project.line}</p>
           <div className="project-links">
             <a className="text-link" href={route(`/work/${project.slug}/`)}>
               View case study
@@ -255,7 +367,9 @@ export default function Home() {
             onClick={() => select(active - 1)}
             disabled={active === 0}
           >
-            ↑
+            <span className="project-step-icon" aria-hidden="true">
+              ↑
+            </span>
           </button>
           <span>
             {pad(active + 1)} / {pad(projects.length)}
@@ -265,7 +379,9 @@ export default function Home() {
             onClick={() => select(active + 1)}
             disabled={active === lastIndex}
           >
-            ↓
+            <span className="project-step-icon" aria-hidden="true">
+              ↓
+            </span>
           </button>
         </div>
         <span>SCROLL OR SELECT TO EXPLORE</span>

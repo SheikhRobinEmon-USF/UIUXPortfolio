@@ -11,6 +11,7 @@ type Post = {
   image: string;
   comments: string[];
   own?: boolean;
+  flair?: string;
 };
 const initialPosts: Post[] = [
   {
@@ -18,6 +19,7 @@ const initialPosts: Post[] = [
     author: "Mina Park",
     caption: "A little study in color and form. What do you notice first?",
     community: "Art & design",
+    flair: "Work in progress",
     likes: 18,
     image: "social.webp",
     comments: ["The palette is beautiful."],
@@ -27,6 +29,7 @@ const initialPosts: Post[] = [
     author: "Noah Chen",
     caption: "Weekend sketches from a quiet corner of the city.",
     community: "Photography",
+    flair: "Field notes",
     likes: 9,
     image: "stays.webp",
     comments: [],
@@ -61,6 +64,8 @@ export default function Social({
   >(k + "updates", [
     { id: "welcome", text: "Mina welcomed you to Common.", read: false },
   ]);
+  const [feedOrder, setFeedOrder] = useState("Latest");
+  const [flair, setFlair] = useState("Discussion");
   const [followingOnly, setFollowingOnly] = useState(false);
   const [composerTopic, setComposerTopic] = useState("Art & design");
   const [composerError, setComposerError] = useState("");
@@ -129,6 +134,7 @@ export default function Social({
         author: profile.name,
         caption: caption.trim(),
         community: composerTopic,
+        flair,
         own: true,
         likes: 0,
         image,
@@ -142,6 +148,7 @@ export default function Social({
     Q("");
     setFollowingOnly(false);
     setComposerError("");
+    setFlair("Discussion");
     update(`You posted in ${composerTopic}.`);
     go("Feed");
     notify("Your post is live in this demo.");
@@ -186,6 +193,7 @@ export default function Social({
         </button>
       )}
       <p>{p.caption}</p>
+      {p.flair && <span className="post-flair">{p.flair}</span>}
       <div className="post-actions">
         <button
           aria-pressed={likes.includes(p.id)}
@@ -259,6 +267,18 @@ export default function Social({
               {topics.map((t) => (
                 <option key={t}>{t}</option>
               ))}
+            </select>
+          </label>
+          <label>
+            Post type
+            <select
+              value={flair}
+              onChange={(event) => setFlair(event.target.value)}
+            >
+              <option>Discussion</option>
+              <option>Work in progress</option>
+              <option>Field notes</option>
+              <option>Question</option>
             </select>
           </label>
           <label>
@@ -467,39 +487,55 @@ export default function Social({
         )}
       </section>
     );
-  const shown = posts.filter(
-    (p) =>
-      (screen !== "Saved" || saved.includes(p.id)) &&
-      (screen !== "Feed" ||
-        !followingOnly ||
-        p.own ||
-        following.includes(p.author) ||
-        joined.includes(p.community)) &&
-      (topic === "All" || p.community === topic) &&
-      `${p.caption} ${p.author} ${p.community}`
-        .toLowerCase()
-        .includes(query.toLowerCase()),
-  );
+  const shown = posts
+    .filter(
+      (p) =>
+        (screen !== "Saved" || saved.includes(p.id)) &&
+        (screen !== "Feed" ||
+          !followingOnly ||
+          p.own ||
+          following.includes(p.author) ||
+          joined.includes(p.community)) &&
+        (topic === "All" || p.community === topic) &&
+        `${p.caption} ${p.author} ${p.community}`
+          .toLowerCase()
+          .includes(query.toLowerCase()),
+    )
+    .sort((first, second) =>
+      feedOrder === "Popular"
+        ? second.likes +
+          Number(likes.includes(second.id)) -
+          first.likes -
+          Number(likes.includes(first.id))
+        : 0,
+    );
   return (
     <section className="social-layout">
       <aside className="social-sidebar">
-        <span className="kicker">YOUR CORNER OF THE INTERNET</span>
-        <h1>Find your people.</h1>
-        <p>Small circles. Big ideas.</p>
+        <h2>Your circles</h2>
         <button className="action" onClick={() => go("Create")}>
           ＋ Create post
         </button>
-        <h3>Communities</h3>
-        {["All", ...topics].map((t) => (
-          <button key={t} aria-pressed={topic === t} onClick={() => Topic(t)}>
-            {t}
-          </button>
-        ))}
+        <div className="circle-links">
+          {["All", ...topics].map((t) => (
+            <button key={t} aria-pressed={topic === t} onClick={() => Topic(t)}>
+              <span className="circle-icon" aria-hidden="true">
+                {t === "All" ? "◈" : t.slice(0, 1)}
+              </span>
+              {t === "All" ? "All circles" : t}
+            </button>
+          ))}
+        </div>
+        <button className="outline" onClick={() => go("Communities")}>
+          Browse circles
+        </button>
       </aside>
       <div className="social-feed">
         <div className="section-heading">
-          <h2>{screen}</h2>
-          <button onClick={() => go("Create")}>＋ New post</button>
+          <div>
+            <span className="kicker">COMMON COMMUNITY</span>
+            <h1>{topic === "All" ? screen : topic}</h1>
+          </div>
         </div>
         {screen === "Feed" && (
           <div className="chips">
@@ -517,14 +553,36 @@ export default function Social({
             </button>
           </div>
         )}
-        <label>
-          Search
-          <input
-            value={query}
-            onChange={(e) => Q(e.target.value)}
-            placeholder="Find a conversation"
-          />
-        </label>
+        <div className="social-toolbar">
+          <label>
+            Search
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => Q(event.target.value)}
+              placeholder="Find a post or creator"
+            />
+          </label>
+          <label>
+            Sort
+            <select
+              value={feedOrder}
+              onChange={(event) => setFeedOrder(event.target.value)}
+            >
+              <option>Latest</option>
+              <option>Popular</option>
+            </select>
+          </label>
+        </div>
+        {screen === "Feed" && (
+          <button className="composer-starter" onClick={() => go("Create")}>
+            <span className="avatar" aria-hidden="true">
+              {profile.name.slice(0, 2).toUpperCase()}
+            </span>
+            <span>Share something with your circle</span>
+            <b aria-hidden="true">＋</b>
+          </button>
+        )}
         {shown.length ? (
           shown.map(post)
         ) : (
@@ -532,9 +590,22 @@ export default function Social({
         )}
       </div>
       <aside className="social-right">
-        <h3>Good to see you, {profile.name}.</h3>
-        <p>Take a moment to share something thoughtful today.</p>
-        <p>Independent demo community. All profiles are fictional.</p>
+        <div className="social-summary">
+          <h2>{profile.name}</h2>
+          <p>
+            {joined.length} {joined.length === 1 ? "circle" : "circles"} ·{" "}
+            {following.length} following
+          </p>
+          <button onClick={() => go("Profile")}>View profile</button>
+        </div>
+        <div className="social-summary">
+          <h2>Your activity</h2>
+          <p>
+            {updates.filter((update) => !update.read).length} unread
+            notifications
+          </p>
+          <button onClick={() => go("Notifications")}>Open activity</button>
+        </div>
       </aside>
     </section>
   );
