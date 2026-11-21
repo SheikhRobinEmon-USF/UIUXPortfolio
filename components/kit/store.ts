@@ -20,7 +20,9 @@ function read<T>(key: string, initial: T): T {
 
 export function useStore<T>(app: string, name: string, initial: T) {
   const key = `sre:${app}:${name}`;
-  const [value, setValue] = useState<T>(initial);
+  // Read synchronously on first render (prototypes are client-only), so a
+  // freshly mounted screen sees records written moments ago by another one.
+  const [value, setValue] = useState<T>(() => (typeof window === "undefined" ? initial : read(key, initial)));
   const latest = useRef(value);
   latest.current = value;
 
