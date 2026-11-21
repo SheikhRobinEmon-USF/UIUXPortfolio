@@ -358,6 +358,8 @@ export default function Catalog({
     0,
     Math.round((Date.parse(dates.end) - Date.parse(dates.start)) / day) || 0,
   );
+  const pricedStay = stay && nights >= 1 && nights <= 28;
+  const stayTotal = (item: Item) => item.price * nights + stayFee;
   const extra = variant === "Premium" || variant === "Extra topping" ? 3 : 0;
   const unit = stay
     ? selected.price * nights
@@ -589,9 +591,8 @@ export default function Catalog({
             {i.name}
           </button>
           <button
-            aria-label={
-              (visibleSaved.includes(i.id) ? "Unsave " : "Save ") + i.name
-            }
+            aria-label={`Save ${i.name}`}
+            aria-pressed={visibleSaved.includes(i.id)}
             className="heart"
             onClick={() => toggle(i.id)}
           >
@@ -623,9 +624,9 @@ export default function Catalog({
           )}
           {!stream && !food && (
             <strong className="card-price">
-              {stay && nights >= 1 && nights <= 28 ? (
+              {pricedStay ? (
                 <>
-                  {money(i.price * nights + stayFee)}{" "}
+                  {money(stayTotal(i))}{" "}
                   <small>
                     total for {nights} {nights === 1 ? "night" : "nights"}
                   </small>
@@ -695,12 +696,12 @@ export default function Catalog({
         </div>
         <h2>What sounds good?</h2>
         {menuItems[selected.id].map((item, index) => (
-          <article className="cart-row" key={item.name}>
+          <article className="cart-row order-line menu-line" key={item.name}>
             <div>
               <b>{item.name}</b>
               <p>{item.description}</p>
             </div>
-            <b>{money(item.price)}</b>
+            <b className="order-price">{money(item.price)}</b>
             <button
               className="action"
               onClick={() => {
@@ -1002,13 +1003,13 @@ export default function Catalog({
           <div className="checkout-grid">
             <div>
               {cart.map((c) => (
-                <article className="cart-row" key={c.id}>
+                <article className="cart-row order-line bag-line" key={c.id}>
                   <div>
                     <strong>{c.name}</strong>
                     <p>{c.option}</p>
                   </div>
                   {!stay && (
-                    <div>
+                    <div className="quantity-actions">
                       <button
                         onClick={() => qty(c.id, -1)}
                         aria-label={"Decrease " + c.name}
@@ -1034,7 +1035,7 @@ export default function Catalog({
                       </button>
                     </div>
                   )}
-                  <b>{money(c.price * c.qty)}</b>
+                  <b className="order-price">{money(c.price * c.qty)}</b>
                 </article>
               ))}
             </div>
@@ -1172,11 +1173,13 @@ export default function Catalog({
             <p>Simulated status · {orders[0].id}</p>
             <section className="panel tracking-status" aria-live="polite">
               <p className="kicker">DELIVERY UPDATE</p>
-              <h2>{deliverySteps[track]?.label || deliverySteps[0].label}</h2>
-              <p>{deliverySteps[track]?.detail || deliverySteps[0].detail}</p>
-              <strong>
-                {deliverySteps[track]?.estimate || deliverySteps[0].estimate}
-              </strong>
+              <div key={track}>
+                <h2>{deliverySteps[track]?.label || deliverySteps[0].label}</h2>
+                <p>{deliverySteps[track]?.detail || deliverySteps[0].detail}</p>
+                <strong>
+                  {deliverySteps[track]?.estimate || deliverySteps[0].estimate}
+                </strong>
+              </div>
             </section>
             {orders[0].address && (
               <p>
@@ -1184,14 +1187,18 @@ export default function Catalog({
                 {orders[0].instructions && ` · ${orders[0].instructions}`}
               </p>
             )}
-            <div className="timeline">
+            <ol className="timeline" aria-label="Delivery progress" role="list">
               {deliverySteps.map(({ label: t }, i) => (
-                <div key={t} className={i <= track ? "done" : ""}>
-                  <span>{i <= track ? "✓" : i + 1}</span>
+                <li
+                  key={t}
+                  className={i <= track ? "done" : ""}
+                  aria-current={i === track ? "step" : undefined}
+                >
+                  <span aria-hidden="true">{i < track ? "✓" : i + 1}</span>
                   {t}
-                </div>
+                </li>
               ))}
-            </div>
+            </ol>
             <button
               className="action"
               disabled={track === 3}
@@ -1414,7 +1421,9 @@ export default function Catalog({
                   >
                     <img src={asset(photos[item.art])} alt="" loading="lazy" />
                     <span>{item.name}</span>
-                    <small>{episodes[part]} · Resume</small>
+                    <small>
+                      {episodes[part]} · {Math.floor(viewing.progress[`${item.id}:${part}`])}s watched
+                    </small>
                   </button>
                 );
               })}
@@ -1502,6 +1511,25 @@ export default function Catalog({
           </>
         )}
       </div>
+      {(genre !== "All" || query.trim() || maxRate !== "Any rate") && (
+        <div className="filter-summary" role="group" aria-label="Applied filters">
+          {genre !== "All" && (
+            <button aria-label={`Clear ${genre} filter`} onClick={() => G("All")}>
+              {genre} ×
+            </button>
+          )}
+          {query.trim() && (
+            <button aria-label="Clear search filter" onClick={() => Q("")}>
+              {query.trim()} ×
+            </button>
+          )}
+          {maxRate !== "Any rate" && (
+            <button aria-label="Clear price filter" onClick={() => setMaxRate("Any rate")}>
+              Up to ${maxRate} per night ×
+            </button>
+          )}
+        </div>
+      )}
       <div className={stay && map ? "map-results" : undefined}>
         {stay && map && filtered.length > 0 && (
           <div className="map" aria-label="Illustrative property map">
@@ -1513,10 +1541,10 @@ export default function Catalog({
                 }}
                 key={i.id}
                 aria-pressed={selected.id === i.id}
-                aria-label={`${i.name}, ${money(i.price)} per night`}
+                aria-label={`${i.name}, ${pricedStay ? `${money(stayTotal(i))} total for ${nights} ${nights === 1 ? "night" : "nights"}` : `${money(i.price)} per night`}`}
                 onClick={() => chooseProperty(i, true)}
               >
-                {money(i.price)}
+                {money(pricedStay ? stayTotal(i) : i.price)}
               </button>
             ))}
             <p>

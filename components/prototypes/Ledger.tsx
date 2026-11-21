@@ -280,7 +280,7 @@ export default function Ledger({
     <div>
       {rows.length ? (
         rows.map((e) => (
-          <article className="entry" key={e.id}>
+          <article className="entry ledger-entry" key={e.id} data-category={e.category}>
             <button
               className="plain-title"
               onClick={() => {
@@ -293,14 +293,18 @@ export default function Ledger({
                 {e.category} · {e.date}
               </small>
             </button>
-            <b>{value(e)}</b>
-            <button onClick={() => editRow(e)}>Edit</button>
-            <button
-              aria-label={"Remove " + e.name}
-              onClick={() => Entries((old) => old.filter((x) => x.id !== e.id))}
-            >
-              ×
-            </button>
+            <b className="entry-value">{value(e)}</b>
+            <div className="entry-actions">
+              <button onClick={() => editRow(e)}>Edit</button>
+              <button
+                aria-label={"Remove " + e.name}
+                onClick={() =>
+                  Entries((old) => old.filter((x) => x.id !== e.id))
+                }
+              >
+                ×
+              </button>
+            </div>
           </article>
         ))
       ) : (
@@ -829,6 +833,7 @@ export default function Ledger({
     }
   }
   const trendValues = trendDays.map((day) => dailyTotals.get(day) ?? 0);
+  const selectedTrend = trendDays.indexOf(date);
   const highest = Math.max(...trendValues, 1);
   const directlyLogged = entries
     .filter((entry) => entry.date === date && entry.category === "Activity")
@@ -869,32 +874,34 @@ export default function Ledger({
               : "A clearer view of where your money goes."}
           </p>
         </div>
-        <label>
-          {health ? "Date" : "Range"}
-          {health ? (
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => D(e.target.value)}
-            />
-          ) : (
-            <select value={range} onChange={(e) => R(e.target.value)}>
-              <option>Month</option>
-              <option>Week</option>
-              <option>All time</option>
-            </select>
-          )}
-        </label>
-        {health && (
+        <div className="ledger-period">
           <label>
-            Range
-            <select value={range} onChange={(e) => R(e.target.value)}>
-              <option>Day</option>
-              <option>Week</option>
-              <option>Month</option>
-            </select>
+            {health ? "Date" : "Range"}
+            {health ? (
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => D(e.target.value)}
+              />
+            ) : (
+              <select value={range} onChange={(e) => R(e.target.value)}>
+                <option>Month</option>
+                <option>Week</option>
+                <option>All time</option>
+              </select>
+            )}
           </label>
-        )}
+          {health && (
+            <label>
+              Range
+              <select value={range} onChange={(e) => R(e.target.value)}>
+                <option>Day</option>
+                <option>Week</option>
+                <option>Month</option>
+              </select>
+            </label>
+          )}
+        </div>
       </div>
       {overview &&
         (health ? (
@@ -981,7 +988,14 @@ export default function Ledger({
               {health ? `${currentMetric} trend` : "Spending activity"}
             </h2>
           </div>
-          <p>{health ? units[currentMetric] : "USD"}</p>
+          {health && selectedTrend !== -1 ? (
+            <output aria-live="polite">
+              {trendValues[selectedTrend]} {units[currentMetric]}
+              <small>{date}</small>
+            </output>
+          ) : (
+            <p>{health ? units[currentMetric] : "USD"}</p>
+          )}
         </div>
         <div className="trend-bars">
           {trendDays.map((day, index) => {

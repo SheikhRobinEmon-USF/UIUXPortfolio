@@ -53,3 +53,9 @@ The same default mobile Lighthouse profile was used. The homepage, VITAL and MON
 | `/play/stays/` | 94 | 100 | 100 | 100 | 2976 | 0.000 | 106 |
 
 All nine audited routes scored 92–100 for Performance and 100 for Accessibility, Best Practices and SEO. Five routes exceeded the 2.5-second LCP target. Homepage LCP measured 2.51 seconds. All audited routes stayed within the CLS target.
+
+## Responsive layout and interaction checks
+
+Checked all 17 routes in Chromium at 320, 375, 390, 430, 768, 1024, 1440 and 1920 px. Exercised every demo navigation destination at 320 px. The VITAL regression test compares the actual right edges of the values and action groups at five widths and checks that Edit retains a 44 px target.
+
+The interaction test checks the catalog card lift and image zoom, the saved state animation, and the demo screen transition. It also checks these effects with reduced motion enabled. The 17-route axe scan passed after changing the case-study scroll reveals to preserve text contrast. The refreshed [motion recording](project-transitions.webm) includes the gallery handoff, a product hover and save, and VITAL’s trend and timeline controls.

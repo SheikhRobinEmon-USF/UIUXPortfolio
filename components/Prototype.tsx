@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { type Project, route } from "../lib/projects";
 import "./prototype.css";
@@ -58,6 +58,28 @@ export default function Prototype({ project: p }: { project: Project }) {
   const [epoch, setEpoch] = useState(0);
   const [screen, setScreen] = useState(navs[p.slug][0]);
   const [note, setNote] = useState("");
+  const content = useRef<HTMLDivElement>(null);
+  const previousScreen = useRef(screen);
+  useEffect(() => {
+    if (previousScreen.current === screen) return;
+    previousScreen.current = screen;
+    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (preference.matches) return;
+
+    const animation = content.current?.animate(
+      [
+        { opacity: 0.55, translate: "0 18px" },
+        { opacity: 1, translate: "0 0" },
+      ],
+      { duration: 420, easing: "cubic-bezier(.22,.78,.16,1)" },
+    );
+    const cancel = () => animation?.cancel();
+    preference.addEventListener("change", cancel);
+    return () => {
+      cancel();
+      preference.removeEventListener("change", cancel);
+    };
+  }, [screen]);
   const go = (s: string) => {
     setScreen(s);
     setNote("");
@@ -112,13 +134,15 @@ export default function Prototype({ project: p }: { project: Project }) {
         <p className="notice" role="status">
           {note}
         </p>
-        {["ecommerce", "food", "stays", "streaming"].includes(p.slug) ? (
-          <Catalog p={p} screen={screen} go={go} notify={setNote} />
-        ) : p.slug === "social" ? (
-          <Social screen={screen} go={go} notify={setNote} />
-        ) : (
-          <Ledger p={p} screen={screen} go={go} notify={setNote} />
-        )}
+        <div className="app-content" ref={content}>
+          {["ecommerce", "food", "stays", "streaming"].includes(p.slug) ? (
+            <Catalog p={p} screen={screen} go={go} notify={setNote} />
+          ) : p.slug === "social" ? (
+            <Social screen={screen} go={go} notify={setNote} />
+          ) : (
+            <Ledger p={p} screen={screen} go={go} notify={setNote} />
+          )}
+        </div>
       </div>
       <footer className="app-footer">
         {p.name} · Concept by Sheikh Robin Emon · Local simulation

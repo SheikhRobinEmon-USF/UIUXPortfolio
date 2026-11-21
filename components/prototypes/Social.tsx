@@ -203,6 +203,9 @@ export default function Social({
               update(`You liked a post by ${p.author}.`);
           }}
         >
+          <span className="reaction-icon" aria-hidden="true">
+            {likes.includes(p.id) ? "♥" : "♡"}
+          </span>{" "}
           Like · {p.likes + (likes.includes(p.id) ? 1 : 0)}
         </button>
         <button
