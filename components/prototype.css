@@ -264,7 +264,6 @@
 }
 .detail-grid {
   margin-top: 20px;
-  animation: reveal 0.45s;
 }
 .detail-grid .art-button {
   background: var(--accent);
@@ -1834,8 +1833,8 @@
 
 /* Motion follows state, with steady layouts and distinct rest and active states. */
 @keyframes demo-entrance {
-  from { opacity: .6; translate: 0 18px; }
-  to { opacity: 1; translate: 0 0; }
+  from { translate: 0 18px; }
+  to { translate: 0 0; }
 }
 @keyframes state-confirmation {
   0%, 100% { scale: 1; }
