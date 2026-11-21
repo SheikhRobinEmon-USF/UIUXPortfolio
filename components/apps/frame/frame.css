@@ -28,6 +28,9 @@
   font-family: var(--k-font);
   -webkit-font-smoothing: antialiased;
 }
+.fr-web {
+  overflow-x: clip;
+}
 :where(.frame) button {
   font-family: inherit;
   color: inherit;
@@ -1198,6 +1201,23 @@
 @media (max-width: 560px) {
   .fr-header nav {
     display: none;
+  }
+  .fr-header {
+    padding: 0 14px;
+  }
+  .fr-header .fr-logo {
+    font-size: 20px;
+    letter-spacing: 0.22em;
+  }
+  .fr-tools {
+    gap: 8px;
+  }
+  .fr-bell,
+  .fr-me .icon {
+    display: none;
+  }
+  .fr-search.open input {
+    width: 96px !important;
   }
   .fr-hero p {
     font-size: 15px;

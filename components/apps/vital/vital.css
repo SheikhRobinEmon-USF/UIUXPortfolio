@@ -1530,3 +1530,18 @@
 .vtm .vt-add-habit {
   margin: 4px 0 24px;
 }
+@media (max-width: 560px) {
+  .vt-top .vt-week {
+    max-width: 100%;
+    gap: 2px;
+  }
+  .vt-top .vt-week button {
+    width: 40px;
+  }
+  .vt-web {
+    overflow-x: clip;
+  }
+}
+.vtm.dark .ph-scroll {
+  background: var(--night);
+}

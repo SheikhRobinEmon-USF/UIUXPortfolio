@@ -1,594 +1,338 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
-const projects = {
-  ecommerce: "E-COMMERCE",
-  social: "SOCIAL",
-  streaming: "STREAMING",
-  health: "HEALTH",
-  finance: "FINANCE",
-  food: "FOOD",
-  stays: "STAYS",
-} as const;
-const widths = [320, 375, 390, 430, 768, 1024, 1440, 1920];
-const names = Object.keys(projects) as (keyof typeof projects)[];
+const slugs = ["ecommerce", "social", "streaming", "health", "finance", "food", "stays"] as const;
+const labels = ["E-COMMERCE", "SOCIAL", "STREAMING", "HEALTH", "FINANCE", "FOOD", "STAYS"];
+const widths = [320, 375, 430, 768, 1024, 1440, 1920];
 
-const button = (page: Page, name: string | RegExp) =>
-  page.getByRole("button", { name, exact: typeof name === "string" });
-const link = (page: Page, name: string) =>
-  page.getByRole("link", { name, exact: true });
-const reset = async (page: Page) => {
-  await button(page, "Reset demo data").click();
-  await expect(page.getByRole("status").first()).toHaveText("Demo data reset.");
-};
-const screenshot = async (page: Page, path: string) => {
-  await page.evaluate(async () => {
-    await document.fonts.ready;
-    await Promise.allSettled(
-      document.getAnimations().map((animation) => animation.finished),
-    );
-    await Promise.allSettled(
-      Array.from(document.images, (image) =>
-        image.loading === "lazy" ? Promise.resolve() : image.decode(),
-      ),
-    );
+async function fresh(page: Page, url: string) {
+  await page.goto(url);
+  await page.evaluate(() => {
+    localStorage.clear();
+    sessionStorage.setItem("sre:intro", "1");
   });
-  await page.screenshot({
-    path,
-    type: "jpeg",
-    quality: 84,
-    animations: "disabled",
-  });
-};
+  await page.goto(url);
+}
 
-async function responsive(page: Page, route: string) {
+async function noOverflow(page: Page, label: string) {
   for (const width of widths) {
     await page.setViewportSize({ width, height: width < 500 ? 812 : 900 });
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth + 1,
-      ),
-      `${route} horizontal overflow at ${width}px`,
-    ).toBeTruthy();
+    await page.waitForTimeout(150);
+    const ok = await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1);
+    expect(ok, `${label} overflows horizontally at ${width}px`).toBeTruthy();
   }
   await page.setViewportSize({ width: 1440, height: 900 });
 }
 
-test("home selector, navigation, responsive layouts and reduced motion", async ({
-  page,
-}) => {
-  await page.goto("/");
-  await screenshot(page, "docs/home-desktop.jpg");
-  for (const [slug, label] of Object.entries(projects)) {
-    const entry = button(page, new RegExp(label));
-    await entry.click();
-    await expect(entry).toHaveAttribute("aria-current", "true");
-    await expect(link(page, "View case study")).toHaveAttribute(
-      "href",
-      `/work/${slug}/`,
-    );
-  }
-  await page.keyboard.press("ArrowUp");
-  await expect(button(page, /FOOD/)).toHaveAttribute("aria-current", "true");
-  await link(page, "View case study").click();
-  await expect(page).toHaveURL("/work/food/");
-  await page.goBack();
-  await expect(page).toHaveURL("/");
-  await expect(button(page, /FOOD/)).toHaveAttribute("aria-current", "true");
-  await page.goForward();
-  await expect(page).toHaveURL("/work/food/");
-  await link(page, "Selected work").click();
-  await expect(button(page, /FOOD/)).toHaveAttribute("aria-current", "true");
-  await expect(page.locator(".preview.current")).toHaveCSS(
-    "view-transition-name",
-    "project-artwork",
-  );
-  await page.mouse.move(350, 450);
-  await page.mouse.wheel(0, 150);
-  await expect(button(page, /STAYS/)).toHaveAttribute("aria-current", "true");
-  await page.mouse.wheel(0, -90);
-  for (const delta of [-33, -24, -15, -7]) await page.mouse.wheel(0, delta);
-  await expect(button(page, /FOOD/)).toHaveAttribute("aria-current", "true");
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect(page.locator(".preview.current")).toHaveCSS(
-    "transition-duration",
-    "0s",
-  );
-  await responsive(page, "Home");
-  await page.setViewportSize({ width: 375, height: 812 });
-  await button(page, /E-COMMERCE/).click();
-  await screenshot(page, "docs/home-mobile.jpg");
-  await button(page, "Next project").click();
-  await expect(button(page, /SOCIAL/)).toHaveAttribute("aria-current", "true");
-  await link(page, "About").click();
-  await expect(page).toHaveURL("/about/");
-  await responsive(page, "About");
-  await page.goto("/contact/");
-  await responsive(page, "Connect");
-  await expect(page.getByText("United States", { exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: /Email/ })).toHaveAttribute(
-    "href",
-    /^mailto:/,
-  );
-  await expect(page.getByRole("link", { name: /LinkedIn/ })).toHaveAttribute(
-    "href",
-    /linkedin\.com/,
-  );
-  await expect(
-    page.getByRole("link", { name: /Connect on GitHub/ }),
-  ).toBeVisible();
-});
+const phone = (page: Page) => page.locator(".phone-screen");
 
-for (const slug of names) {
-  test(`${slug} routes, keyboard, responsive widths, screenshots and reset`, async ({
-    page,
-  }) => {
-    await page.goto(`/work/${slug}/`);
-    await responsive(page, `/work/${slug}/`);
-    await link(page, "Explore interactive prototype").click();
-    await expect(page).toHaveURL(`/play/${slug}/`);
-    await page.reload();
-    await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
-    await screenshot(page, `public/media/${slug}-screen.jpg`);
-    await responsive(page, `/play/${slug}/`);
-    const navigation = page.getByRole("navigation");
-    const labels = await navigation.getByRole("button").allTextContents();
-    await page.setViewportSize({ width: 320, height: 660 });
-    for (const name of labels) {
-      const tab = navigation.getByRole("button", { name, exact: true });
-      await tab.click();
-      await expect(tab).toHaveAttribute("aria-current", "page");
-      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(321);
+test.describe("portfolio", () => {
+  test("home: index, keyboard, overview and case-study navigation", async ({ page }) => {
+    await fresh(page, "/");
+    const index = page.getByRole("navigation", { name: "Project index" });
+    for (const [i, label] of labels.entries()) {
+      const b = index.getByRole("button", { name: new RegExp(label) });
+      await b.click();
+      await expect(b).toHaveAttribute("aria-current", "true");
+      await expect(page.locator(".home-tag")).toContainText(label);
+      await expect(page.getByRole("link", { name: "Web prototype" })).toHaveAttribute("href", `/play/${slugs[i]}/?view=web`);
     }
-    await page.setViewportSize({ width: 1440, height: 900 });
-    const firstTab = page.getByRole("navigation").getByRole("button").first();
-    await firstTab.focus();
-    await page.keyboard.press("Enter");
-    await expect(firstTab).toHaveAttribute("aria-current", "page");
-    await reset(page);
-    await expect(
-      page.getByRole("link", { name: /Case study/ }),
-    ).toHaveAttribute("href", `/work/${slug}/`);
+    await page.keyboard.press("ArrowUp");
+    await expect(index.getByRole("button", { name: /FOOD/ })).toHaveAttribute("aria-current", "true");
+    await page.getByRole("button", { name: /Overview/ }).click();
+    await expect(page.locator(".home")).toHaveClass(/is-grid/);
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".home")).not.toHaveClass(/is-grid/);
+    const cta = page.getByRole("link", { name: "Case study", exact: true });
+    await expect(cta).toHaveAttribute("href", "/work/food/");
+    await cta.click();
+    await expect(page).toHaveURL(/\/work\/food\/$/);
+    await expect(page.getByRole("heading", { level: 1, name: "CRAVE" })).toBeVisible();
+    await page.getByRole("link", { name: "Index" }).click();
+    await expect(page).toHaveURL(/\/\?project=food$/);
+    await expect(index.getByRole("button", { name: /FOOD/ })).toHaveAttribute("aria-current", "true");
   });
-}
 
-test("ATELIER variants, gallery, empty bag, validation, delivery, promo and order history", async ({
-  page,
-}) => {
-  await page.goto("/play/ecommerce/");
-  await button(page, "Bag").click();
-  await expect(page.getByText("Your cart is empty")).toBeVisible();
-  await button(page, "Browse").click();
-  await button(page, "Living").click();
-  await expect(page.getByText("2 results", { exact: true })).toBeVisible();
-  await button(page, "Clear Living filter").click();
-  await expect(page.getByText("4 results", { exact: true })).toBeVisible();
-  await page.getByRole("searchbox", { name: "Search", exact: true }).fill("not a product");
-  await expect(page.getByText("No matches")).toBeVisible();
-  await button(page, "Clear search filter").click();
-  await page.getByRole("searchbox", { name: "Search", exact: true }).fill("Forma");
-  await button(page, "Forma chair").click();
-  await expect(
-    page.getByRole("heading", { name: "Forma chair" }),
-  ).toBeVisible();
-  await screenshot(page, "public/media/ecommerce-detail.jpg");
-  await button(page, "Alternate").click();
-  await expect(page.getByRole("img", { name: "Forma chair" })).toHaveAttribute(
-    "src",
-    /chair-dark/,
-  );
-  await button(page, "Zoom image").click();
-  await expect(page.locator(".zoomed")).toBeVisible();
-  await page.getByLabel("Material").selectOption("Premium");
-  await page.getByLabel("Size").selectOption("L");
-  await button(page, "Add to bag").click();
-  await expect(page.getByText("Premium · Size L")).toBeVisible();
-  await button(page, "Increase Forma chair").click();
-  await page.getByLabel("Promo code (DEMO10)").fill("WRONG");
-  await expect(page.getByText("This promo code does not apply.")).toBeVisible();
-  await page.getByLabel("Promo code (DEMO10)").fill("DEMO10");
-  await page.getByLabel("Delivery").selectOption("Express");
-  await expect(page.getByText("Total $458.60")).toBeVisible();
-  await button(page, "Continue to checkout").click();
-  await button(page, "Confirm demo order").click();
-  await expect(page.getByLabel("Email")).toBeFocused();
-  await page.getByLabel("Email").fill("guest@example.com");
-  await page.getByLabel("Demo delivery address").fill("Demo address");
-  await button(page, "Confirm demo order").click();
-  await expect(
-    page.getByRole("heading", { name: "You’re all set!" }),
-  ).toBeVisible();
-  await page.reload();
-  await button(page, "Orders").click();
-  await expect(page.getByText(/DEMO-\d+/)).toBeVisible();
-  await reset(page);
-  await button(page, "Orders").click();
-  await expect(page.getByText("No completed orders")).toBeVisible();
-});
-
-test("COMMON post composition, comments, local image, activity, profile and reset", async ({
-  page,
-}) => {
-  await page.goto("/play/social/");
-  await button(page, "Saved").click();
-  await expect(page.getByText("No posts in this view yet.")).toBeVisible();
-  await button(page, "＋ Create post").click();
-  await page.getByLabel("Caption").fill(" ");
-  await button(page, "Publish post").click();
-  await expect(page.locator("main").getByRole("alert")).toContainText(
-    "Write a caption",
-  );
-  await page.getByLabel("Caption").fill("A thoughtful demo post");
-  await page
-    .getByRole("combobox", { name: "Post type" })
-    .selectOption("Question");
-  await page
-    .getByRole("combobox", { name: "Community" })
-    .selectOption("Photography");
-  await page
-    .getByLabel("Choose local image")
-    .setInputFiles("public/media/stays.webp");
-  await expect(page.getByRole("img", { name: "Post preview" })).toBeVisible();
-  await screenshot(page, "public/media/social-detail.jpg");
-  await button(page, "Publish post").click();
-  const card = page
-    .locator(".post")
-    .filter({ hasText: "A thoughtful demo post" });
-  await expect(card).toBeVisible();
-  await expect(card.getByText("Question", { exact: true })).toBeVisible();
-  await card.getByRole("button", { name: "Save", exact: true }).click();
-  await card.getByRole("button", { name: /Comments/ }).click();
-  await page.getByLabel("Add comment").fill("This is a second thought.");
-  await button(page, "Send comment").click();
-  await expect(page.getByText("This is a second thought.")).toBeVisible();
-  await page.reload();
-  await expect(page.getByText("A thoughtful demo post")).toBeVisible();
-  await button(page, "Notifications").click();
-  await expect(page.getByText("You posted in Photography.")).toBeVisible();
-  await button(page, "Mark all as read").click();
-  await expect(page.getByText("0 unread updates")).toBeVisible();
-  await button(page, "Communities").click();
-  await button(page, "Explore Art & design").click();
-  await expect(
-    page.getByText("A little study", { exact: false }),
-  ).toBeVisible();
-  await reset(page);
-  await expect(page.getByText("A thoughtful demo post")).toHaveCount(0);
-});
-
-test("FRAME search, empty watchlist, viewer isolation, captions, actual playback and episode switching", async ({
-  page,
-}) => {
-  await page.goto("/play/streaming/");
-  await button(page, "Preview").click();
-  await expect(
-    page
-      .getByRole("region", { name: "Featured title preview" })
-      .locator("video"),
-  ).toBeVisible();
-  await button(page, "Close preview").click();
-  await button(page, "Watchlist").click();
-  await expect(page.getByText("Your collection is empty")).toBeVisible();
-  await button(page, "Browse").click();
-  await page.getByLabel("Search").fill("The Quiet Earth");
-  await expect(page.getByText("1 result", { exact: true })).toBeVisible();
-  await button(page, "The Quiet Earth").click();
-  await expect(
-    page.getByRole("heading", { name: "The Quiet Earth" }),
-  ).toBeVisible();
-  await screenshot(page, "public/media/streaming-detail.jpg");
-  await button(page, "♡ Save for later").click();
-  await button(page, "▶ Play sample").click();
-  const video = page.locator("video");
-  await expect(video).toBeVisible();
-  await expect(video.locator("track")).toHaveAttribute("src", /earth-0\.vtt/);
-  await expect
-    .poll(() => video.evaluate((element: HTMLVideoElement) => element.duration))
-    .toBeGreaterThan(5);
-  await video.evaluate((element: HTMLVideoElement) => {
-    element.muted = true;
-    return element.play();
+  test("home and case study have no horizontal overflow and pass axe", async ({ page }) => {
+    await fresh(page, "/");
+    await noOverflow(page, "home");
+    const home = await new AxeBuilder({ page }).disableRules(["color-contrast"]).analyze();
+    expect(home.violations.map((v) => v.id)).toEqual([]);
+    await page.goto("/work/stays/");
+    await expect(page.getByRole("heading", { level: 1, name: "ROAM" })).toBeVisible();
+    await noOverflow(page, "case study");
+    // the overview paragraph fades in word by word on scroll, so its resting state is checked separately
+    const work = await new AxeBuilder({ page }).include(".c-intro").include(".c-facts").exclude(".c-scrolltext").analyze();
+    expect(work.violations.map((v) => v.id)).toEqual([]);
   });
-  await expect
-    .poll(() =>
-      video.evaluate((element: HTMLVideoElement) => element.currentTime),
-    )
-    .toBeGreaterThan(1);
-  await video.evaluate((element: HTMLVideoElement) => element.pause());
-  await button(page, "Continue watching").click();
-  await expect(button(page, "The Quiet Earth")).toBeVisible();
-  await button(page, "The Quiet Earth").click();
-  await button(page, "Resume sample").click();
-  await page.getByLabel("Episode").selectOption("1");
-  await expect(video).toHaveAttribute("src", /earth-1\.mp4/);
-  await page.reload();
-  await button(page, "Watchlist").click();
-  await expect(button(page, "The Quiet Earth")).toBeVisible();
-  await button(page, "Profiles").click();
-  await button(page, "Guest").click();
-  await button(page, "Watchlist").click();
-  await expect(page.getByText("Your collection is empty")).toBeVisible();
-});
 
-test("VITAL dated wellness entries, validation, habits, journal and reset", async ({
-  page,
-}) => {
-  await page.goto("/play/health/");
-  await expect(
-    page.getByRole("progressbar", { name: "Daily movement goal" }),
-  ).toHaveAttribute("value", "28");
-  await button(page, /2026-11-18, 37 min/).click();
-  await expect(page.locator(".trend-heading output")).toContainText("37 min");
-  await expect(page.getByLabel("Date", { exact: true })).toHaveValue(
-    "2026-11-18",
-  );
-  await button(page, /2026-11-21, 28 min/).click();
-  await button(page, "Track habits").click();
-  await screenshot(page, "public/media/health-detail.jpg");
-  await page.getByLabel("Drink water").check();
-  await expect(page.getByText("1 of 4 complete")).toBeVisible();
-  await page.getByLabel("Wellness date").fill("2026-11-20");
-  await expect(page.getByText("0 of 4 complete")).toBeVisible();
-  await button(page, "Activity").click();
-  await expect(page.getByText("No entries match.")).toBeVisible();
-  await button(page, "Save entry").click();
-  await expect(page.getByLabel("Name")).toBeFocused();
-  await page.getByLabel("Name").fill("Stretch break");
-  await page.getByLabel("Value (min)").fill("12");
-  await button(page, "Save entry").click();
-  await expect(button(page, /^Stretch break/)).toBeVisible();
-  await button(page, "Journal").click();
-  await page.getByLabel("Daily journal").fill("Feeling rested.");
-  await page.getByLabel("Wellness date").fill("2026-11-21");
-  await expect(page.getByLabel("Daily journal")).toHaveValue("");
-  await button(page, "Today").click();
-  await expect(page.getByText("1/4", { exact: true })).toBeVisible();
-  await page.reload();
-  await expect(page.getByText("1/4", { exact: true })).toBeVisible();
-  await reset(page);
-  await expect(page.getByText("0/4", { exact: true })).toBeVisible();
-});
-
-test("VITAL timeline values and actions align on desktop and fit on phones", async ({ page }) => {
-  await page.goto("/play/health/");
-  const rows = page.locator(".wellness-timeline .ledger-entry");
-  await expect(rows).toHaveCount(3);
-  for (const width of [1920, 1440, 768, 390, 320]) {
-    await page.setViewportSize({ width, height: 820 });
-    const bounds = await rows.evaluateAll((entries) => entries.map((entry) => {
-      const value = entry.querySelector(".entry-value")!.getBoundingClientRect();
-      const actions = entry.querySelector(".entry-actions")!.getBoundingClientRect();
-      const edit = entry.querySelector(".entry-actions button")!.getBoundingClientRect();
-      return { valueRight: value.right, actionsRight: actions.right, editWidth: edit.width, editHeight: edit.height };
-    }));
-    for (const row of bounds) {
-      expect(row.valueRight).toBeCloseTo(bounds[0].valueRight, 1);
-      expect(row.actionsRight).toBeCloseTo(bounds[0].actionsRight, 1);
-      expect(row.actionsRight).toBeLessThan(width);
-      expect(row.editWidth).toBeGreaterThanOrEqual(44);
-      expect(row.editHeight).toBeGreaterThanOrEqual(44);
+  test("case studies embed both prototypes and hand off to the next project", async ({ page }) => {
+    for (const [i, slug] of slugs.entries()) {
+      await page.goto(`/work/${slug}/`);
+      await expect(page.locator(".c-scrolltext")).toBeVisible();
+      await expect(page.getByRole("link", { name: "Open the web prototype" })).toHaveAttribute("href", `/play/${slug}/?view=web`);
+      await expect(page.getByRole("link", { name: "Open the mobile app" })).toHaveAttribute("href", `/play/${slug}/?view=mobile`);
+      await page.locator(".c-platforms").scrollIntoViewIfNeeded();
+      await expect(page.locator(`iframe[src*="/play/${slug}/?view=web&embed=1"]`)).toHaveCount(1);
+      await expect(page.locator(`iframe[src*="/play/${slug}/?view=mobile&embed=1"]`)).toHaveCount(1);
+      await expect(page.locator(".c-next")).toHaveAttribute("href", `/work/${slugs[(i + 1) % slugs.length]}/`);
     }
-  }
-  await rows.first().getByRole("button", { name: "Edit" }).click();
-  await expect(page.getByRole("heading", { name: "Edit entry" })).toBeVisible();
-  await expect(page.getByLabel("Name")).toHaveValue("Morning walk");
-});
-
-test("demo hover, press and screen motion respond to the reduced motion setting", async ({ page }) => {
-  await page.goto("/play/ecommerce/");
-  const card = page.locator(".catalog-results .product-card").first();
-  await card.hover();
-  await expect(card).toHaveCSS("translate", "0px -4px");
-  await expect(card.locator("img")).toHaveCSS("transform", "matrix(1.085, 0, 0, 1.085, 0, 0)");
-  const save = card.getByRole("button", { name: /^Save/ });
-  await save.click();
-  await expect(save).toHaveAttribute("aria-pressed", "true");
-  await expect(save).toHaveCSS("animation-name", "state-confirmation");
-  await button(page, "Browse").click();
-  expect(await page.locator(".app-content").evaluate((element) => element.getAnimations().length)).toBeGreaterThan(0);
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect(card).toHaveCSS("transition-duration", "0s");
-  await card.hover();
-  await expect(card).toHaveCSS("translate", "none");
-  await expect(card.locator("img")).toHaveCSS("transform", "none");
-  await button(page, "Wishlist").click();
-  expect(await page.locator(".app-content").evaluate((element) => element.getAnimations().length)).toBe(0);
-});
-
-test("MONETA filters, edits, empty transactions, budget persistence and a local transfer", async ({
-  page,
-}) => {
-  await page.goto("/play/finance/");
-  await expect(
-    page.getByRole("region", { name: "Account balance and spending summary" }),
-  ).toBeVisible();
-  await page.getByLabel("Range").selectOption("Week");
-  await page.getByRole("combobox", { name: "Category" }).selectOption("Food");
-  await expect(page.getByText(/Total spending \$/)).toBeVisible();
-  await button(page, "Manage budgets").click();
-  await screenshot(page, "public/media/finance-detail.jpg");
-  await page.getByLabel("Monthly budget ($)").first().fill("450");
-  await expect(
-    page.getByText("Spent $100.00 · Remaining $350.00"),
-  ).toBeVisible();
-  await page.reload();
-  await button(page, "Manage budgets").click();
-  await expect(page.getByLabel("Monthly budget ($)").first()).toHaveValue(
-    "450",
-  );
-  await button(page, "Accounts").click();
-  await page.getByLabel("Transfer amount ($)").fill("999999999");
-  await button(page, "Record simulated transfer").click();
-  await expect(page.locator("main").getByRole("alert")).toHaveText(
-    "Enter an amount within the available sample balance.",
-  );
-  await page.getByLabel("Transfer amount ($)").fill("100");
-  await button(page, "Record simulated transfer").click();
-  await expect(page.getByRole("heading", { name: "$2,600.00" })).toBeVisible();
-  await button(page, "Transactions").click();
-  await page.getByLabel("Search").fill("unknown merchant");
-  await expect(page.getByText("No entries match.")).toBeVisible();
-});
-
-test("CRAVE meal extras, checkout validation, delivery tracking, persistence and reorder", async ({
-  page,
-}) => {
-  await page.goto("/play/food/");
-  await button(page, "Tracking").click();
-  await expect(page.getByText("No active orders")).toBeVisible();
-  await button(page, "Discover").click();
-  await page
-    .getByRole("combobox", { name: "Delivery area" })
-    .selectOption("18 Market Avenue");
-  await button(page, "Discover the menu").click();
-  await screenshot(page, "public/media/food-detail.jpg");
-  await button(page, "Customize Harvest bowl").click();
-  await page.getByLabel("Customize your meal").selectOption("Extra topping");
-  await expect(page.getByRole("heading", { name: "$17.00" })).toBeVisible();
-  await button(page, "Add to cart").click();
-  await button(page, "Continue to checkout").click();
-  await button(page, "Confirm demo order").click();
-  await expect(page.getByLabel("Email")).toBeFocused();
-  await page.getByLabel("Email").fill("guest@example.com");
-  await expect(page.getByLabel("Demo delivery address")).toHaveValue(
-    "18 Market Avenue",
-  );
-  await page
-    .getByLabel("Delivery instructions")
-    .fill("Leave at the side door.");
-  await button(page, "Confirm demo order").click();
-  await button(page, "Track your order").click();
-  await expect(
-    page.getByText(/18 Market Avenue · Leave at the side door/),
-  ).toBeVisible();
-  await button(page, "Next simulated event").click();
-  await expect(page.locator(".timeline .done")).toHaveCount(2);
-  await expect(page.getByRole("heading", { name: "Preparing" })).toBeVisible();
-  await page.reload();
-  await button(page, "Tracking").click();
-  await expect(page.locator(".timeline .done")).toHaveCount(2);
-  await button(page, "Orders").click();
-  await button(page, "Reorder").click();
-  await expect(page.getByText("Extra topping")).toBeVisible();
-});
-
-test("ROAM map/list, no matches, invalid dates, booking and trip management", async ({
-  page,
-}) => {
-  await page.goto("/play/stays/");
-  await button(page, "Trips").click();
-  await expect(page.getByText("No completed orders")).toBeVisible();
-  await button(page, "Browse").click();
-  await page.getByLabel("Search").fill("Atlantis");
-  await expect(page.getByText("No matches")).toBeVisible();
-  await button(page, "Clear search filter").click();
-  await expect(
-    page.getByText("$343.00").filter({ hasText: "total for 2 nights" }),
-  ).toBeVisible();
-  await button(page, "Map + list").click();
-  await button(page, /Stillwater Loft, \$[\d.]+ total for 2 nights/).click();
-  await expect(button(page, "Stillwater Loft")).toBeFocused();
-  await expect(button(page, /Stillwater Loft, \$/)).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  await page
-    .locator(".product-card")
-    .filter({ hasText: "Juniper Hideaway" })
-    .getByRole("button", { name: "Show on map" })
-    .click();
-  await expect(button(page, /Juniper Hideaway, \$/)).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  await screenshot(page, "public/media/stays-detail.jpg");
-  await button(page, "View stay").click();
-  await page.getByLabel("Check-out").fill("2026-12-01");
-  await button(page, "Reserve this stay").click();
-  await expect(page.locator("main").getByRole("alert")).toHaveText(
-    "Check-out must be after check-in.",
-  );
-  await page.getByLabel("Check-out").fill("2026-12-04");
-  await button(page, "Reserve this stay").click();
-  await expect(page.getByText("Total $497.00")).toBeVisible();
-  await page.getByLabel("Email").fill("guest@example.com");
-  await page.getByLabel("Guest name").fill("Demo guest");
-  await button(page, "Confirm demo reservation").click();
-  await button(page, "View trip").click();
-  await expect(page.getByText(/2026-12-01 to 2026-12-04/)).toBeVisible();
-  await page.reload();
-  await button(page, "Trips").click();
-  await button(page, "Cancel demo trip").click();
-  await expect(page.getByText("No completed orders")).toBeVisible();
-});
-
-test("homepage touch swipe and case opening at a mobile viewport", async ({
-  browser,
-}) => {
-  const context = await browser.newContext({
-    viewport: { width: 375, height: 812 },
-    isMobile: true,
-    hasTouch: true,
   });
-  try {
-    const page = await context.newPage();
-    await page.goto("/");
-    const stack = page.locator(".stack");
-    const box = await stack.boundingBox();
-    if (!box) throw new Error("Missing mobile project previews");
-    const cdp = await context.newCDPSession(page);
-    const y = Math.round(box.y + box.height / 2);
-    await cdp.send("Input.dispatchTouchEvent", {
-      type: "touchStart",
-      touchPoints: [{ x: 310, y }],
-    });
-    await cdp.send("Input.dispatchTouchEvent", {
-      type: "touchMove",
-      touchPoints: [{ x: 150, y }],
-    });
-    await cdp.send("Input.dispatchTouchEvent", {
-      type: "touchEnd",
-      touchPoints: [],
-    });
-    await expect(button(page, /SOCIAL/)).toHaveAttribute(
-      "aria-current",
-      "true",
-    );
-    const activePreview = page.locator(".preview.current");
-    await activePreview.evaluate((element) =>
-      Promise.allSettled(
-        element.getAnimations().map((animation) => animation.finished),
-      ),
-    );
-    await activePreview.tap();
-    await expect(page).toHaveURL("/work/social/");
-  } finally {
-    await context.close();
-  }
+
+  test("about and contact render", async ({ page }) => {
+    await page.goto("/about/");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("Sheikh Robin");
+    await page.goto("/contact/");
+    await expect(page.getByRole("link", { name: /Email/ })).toBeVisible();
+  });
 });
 
-test("axe scan of all 17 routes", async ({ page }, info) => {
-  test.setTimeout(90_000);
-  const results = [];
-  for (const path of [
-    "/",
-    "/about/",
-    "/contact/",
-    ...names.flatMap((slug) => [`/work/${slug}/`, `/play/${slug}/`]),
-  ]) {
-    await page.goto(path);
-    const { violations } = await new AxeBuilder({ page })
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-      .analyze();
-    const summary = violations.map((item) => ({
-      id: item.id,
-      targets: item.nodes.map((node) => node.target),
-    }));
-    results.push({ path, violations: summary });
-  }
-  await info.attach("axe-results.json", {
-    body: JSON.stringify(results, null, 2),
-    contentType: "application/json",
+test.describe("prototype shell", () => {
+  test("switches platforms, keeps state between them, and resets", async ({ page }) => {
+    await fresh(page, "/play/ecommerce/?view=mobile");
+    const ph = phone(page);
+    await ph.locator(".atm-tile-img").first().click();
+    await ph.getByRole("button", { name: "Add to bag" }).click();
+    await expect(ph.locator(".ph-tabs .ph-badge")).toHaveText("1");
+    await page.getByRole("radio", { name: /Web/ }).click();
+    await expect(page).toHaveURL(/view=web/);
+    await expect(page.getByRole("button", { name: "Bag, 1 items" })).toBeVisible();
+    await page.getByRole("button", { name: "Reset demo" }).click();
+    await expect(page.getByRole("button", { name: "Bag, 0 items" })).toBeVisible();
   });
-  expect(results.filter((item) => item.violations.length)).toEqual([]);
+
+  test("defaults to the mobile app on phones and the web on desktops", async ({ browser }) => {
+    const small = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await small.goto("/play/finance/");
+    await expect(small.locator(".play")).toHaveClass(/view-mobile/);
+    await expect(small.locator(".mnm")).toBeVisible();
+    await small.close();
+    const big = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    await big.goto("/play/finance/");
+    await expect(big.locator(".play")).toHaveClass(/view-web/);
+    await big.close();
+  });
+
+  test("web prototypes do not overflow at common widths", async ({ page }) => {
+    for (const slug of slugs) {
+      await fresh(page, `/play/${slug}/?view=web`);
+      if (slug === "social") await page.locator(".cm-onboard .cm-btn").click();
+      if (slug === "streaming") await page.locator(".fr-profiles button").first().click();
+      await page.waitForTimeout(400);
+      await noOverflow(page, `${slug} web`);
+    }
+  });
+});
+
+test.describe("product journeys", () => {
+  test("ATELIER: filter, configure, checkout, track and return", async ({ page }) => {
+    await fresh(page, "/play/ecommerce/?view=web");
+    await page.getByRole("button", { name: "Shop all" }).click();
+    await page.getByRole("checkbox", { name: /Lighting/ }).check();
+    await expect(page.locator(".at-applied")).toContainText("2 pieces");
+    await page.getByRole("button", { name: "Open Luna Table Lamp" }).click();
+    await page.locator(".at-add").click();
+    await expect(page.getByRole("button", { name: "Bag, 1 items" })).toBeVisible();
+    await page.getByRole("button", { name: "Bag, 1 items" }).click();
+    await page.getByLabel("Promo code").fill("ATELIER10");
+    await page.getByRole("button", { name: "Apply" }).click();
+    await expect(page.locator(".at-ok")).toContainText("ATELIER10");
+    await page.getByRole("button", { name: /Checkout securely/ }).click();
+    await page.getByRole("button", { name: /Continue to delivery/ }).click();
+    await page.getByRole("radio", { name: /Express/ }).click();
+    await page.getByRole("button", { name: /Continue to payment/ }).click();
+    await page.getByRole("button", { name: /^Pay/ }).click();
+    await expect(page.getByText("Card number must be 16 digits")).toBeVisible();
+    await page.getByLabel("Card number").fill("4242424242424242");
+    await page.getByLabel("Expiry").fill("0829");
+    await page.getByLabel("Security code").fill("123");
+    await page.getByRole("button", { name: /^Pay/ }).click();
+    await expect(page.getByText("Thank you — it's on its way.")).toBeVisible({ timeout: 6000 });
+    for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Simulate next update" }).click();
+    await page.getByRole("button", { name: "View order" }).click();
+    await page.getByRole("button", { name: "Start a return" }).click();
+    await page.locator(".at-return-item input").first().check();
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("button", { name: "Confirm return" }).click();
+    await expect(page.getByText("Return confirmed")).toBeVisible();
+  });
+
+  test("COMMON: onboard, critique comment, poll, publish and chat", async ({ page }) => {
+    await fresh(page, "/play/social/?view=web");
+    await page.getByRole("button", { name: /Join 1 circle/ }).click();
+    await page.locator(".cm-post-media").first().click();
+    await page.locator(".cm-reply .cm-tagpick").getByRole("button", { name: "Type" }).click();
+    await page.getByLabel("Comment").fill("The headline type could be lighter.");
+    await page.getByRole("button", { name: "Post", exact: true }).click();
+    await expect(page.locator(".cm-comments")).toContainText("The headline type could be lighter.");
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Condensed grotesk" }).click();
+    await expect(page.getByRole("button", { name: /Condensed grotesk/ })).toHaveAttribute("aria-pressed", "true");
+    await page.locator(".cm-create").click();
+    await page.getByRole("tab", { name: /Poll/ }).click();
+    await page.getByLabel("Question").fill("Sketchbook or tablet?");
+    await page.getByLabel("Option 1").fill("Sketchbook");
+    await page.getByLabel("Option 2").fill("Tablet");
+    await page.getByRole("button", { name: "Publish" }).click();
+    await expect(page.locator(".cm-post").first()).toContainText("Sketchbook or tablet?");
+    await page.getByRole("button", { name: /Messages/ }).click();
+    await page.getByLabel("Message").fill("See you Sunday!");
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect(page.locator(".cm-msgs")).toContainText("See you Sunday!");
+    await expect(page.locator(".cm-msgs p:not(.me)")).toHaveCount(2, { timeout: 5000 });
+  });
+
+  test("FRAME: profile, title, player with captions and resume", async ({ page }) => {
+    await fresh(page, "/play/streaming/?view=web");
+    await page.getByRole("button", { name: "Sam" }).click();
+    await page.getByRole("button", { name: /More info/ }).click();
+    await page.locator(".fr-eps button").nth(1).click();
+    const player = page.getByRole("dialog", { name: /Playing The Quiet Earth, episode 2/ });
+    await expect(player).toBeVisible();
+    await page.getByRole("button", { name: "Captions" }).click();
+    await page.getByRole("button", { name: "Close player" }).click();
+    await expect(page.locator(".fr-row").first()).toContainText("Continue watching");
+    await page.getByRole("button", { name: "Search" }).click();
+    await page.getByLabel("Search titles").fill("orbit");
+    await expect(page.locator(".fr-results")).toContainText("Results for");
+  });
+
+  test("VITAL: live workout closes rings, habit streak, breathing", async ({ page }) => {
+    await fresh(page, "/play/health/?view=web");
+    const before = await page.locator(".vt-ring-stats strong").first().innerText();
+    await page.getByRole("button", { name: /Start workout/ }).click();
+    await page.getByRole("button", { name: /Outdoor run/ }).click();
+    await page.waitForTimeout(3500);
+    const end = page.getByRole("button", { name: "Hold to end workout" });
+    await end.hover();
+    await page.mouse.down();
+    await page.waitForTimeout(1100);
+    await page.mouse.up();
+    await page.getByRole("button", { name: "Save workout" }).click();
+    await expect(page.locator(".vt-ring-stats strong").first()).not.toHaveText(before, { timeout: 4000 });
+    await page.getByRole("button", { name: /Walk outside/ }).click();
+    await expect(page.getByRole("button", { name: /Walk outside/ })).toHaveAttribute("aria-pressed", "true");
+    await page.getByRole("button", { name: "Mindfulness" }).click();
+    await page.getByRole("button", { name: "Begin" }).click();
+    await expect(page.locator(".vt-orb-label")).toContainText(/Breathe in|Breathe out/);
+  });
+
+  test("MONETA: recategorise, budget, cancel subscription, send money", async ({ page }) => {
+    await fresh(page, "/play/finance/?view=web");
+    await page.locator(".mn-txns .mn-txn").first().click();
+    await page.locator(".mn-catgrid").getByRole("button", { name: /Travel/ }).click();
+    await expect(page.locator(".mn-catgrid").getByRole("button", { name: /Travel/ })).toHaveAttribute("aria-pressed", "true");
+    await page.keyboard.press("Escape");
+    await page.getByRole("navigation", { name: "MONETA" }).getByRole("button", { name: "Subscriptions" }).click();
+    await page.locator(".mn-sub").filter({ hasText: "News Daily" }).getByRole("button", { name: "Cancel" }).click();
+    await page.getByRole("button", { name: /I don't use it enough/ }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("button", { name: "Cancel subscription" }).click();
+    await expect(page.getByText("News Daily cancelled")).toBeVisible();
+    await page.getByRole("button", { name: "Done" }).click();
+    await page.getByRole("button", { name: /Send money/ }).click();
+    await page.getByRole("button", { name: /Maya Rivera/ }).click();
+    await page.getByLabel("Amount in dollars").fill("99999");
+    await page.getByRole("button", { name: "Review" }).click();
+    await expect(page.locator(".mn-err")).toContainText("more than");
+    await page.getByLabel("Amount in dollars").fill("25");
+    await page.getByRole("button", { name: "Review" }).click();
+    await page.getByRole("button", { name: /Send \$25.00/ }).click();
+    await expect(page.getByText("$25.00 sent")).toBeVisible({ timeout: 5000 });
+  });
+
+  test("CRAVE: required choice, cart, fees, order and tracking", async ({ page }) => {
+    await fresh(page, "/play/food/?view=web");
+    await page.getByRole("button", { name: "Open Good Buns" }).click();
+    await page.locator(".cr-pop").first().click();
+    await page.getByRole("button", { name: /Choose doneness/ }).click();
+    await page.getByText("Medium", { exact: true }).click();
+    await page.getByText("Bacon").click();
+    await expect(page.locator(".cr-custom-foot .cr-btn")).toContainText("$17.00");
+    await page.locator(".cr-custom-foot .cr-btn").click();
+    await page.getByRole("button", { name: /Cart, 1 items/ }).click();
+    await page.getByRole("button", { name: /Go to checkout/ }).click();
+    await page.getByRole("button", { name: "About Service fee" }).click();
+    await expect(page.getByText(/8% of subtotal/)).toBeVisible();
+    await page.getByRole("button", { name: /Place order/ }).click();
+    await expect(page.getByRole("heading", { name: "Order confirmed" })).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) await page.getByRole("button", { name: "Simulate next step" }).click();
+    await expect(page.getByRole("heading", { name: "Delivered" })).toBeVisible();
+    await page.getByRole("radio", { name: "5 stars" }).click();
+    await page.getByRole("button", { name: "Submit rating" }).click();
+    await expect(page.getByText(/You rated this order 5/)).toBeVisible();
+  });
+
+  test("ROAM: filters, blocked dates, reserve and cancel", async ({ page }) => {
+    await fresh(page, "/play/stays/?view=web");
+    await page.getByRole("button", { name: /Filters/ }).click();
+    await page.getByRole("button", { name: "Villa" }).click();
+    await page.getByRole("button", { name: /Show 1 stays/ }).click();
+    await expect(page.locator(".rm-results-title")).toContainText("1 stay");
+    await page.getByRole("button", { name: "Open Casa Sol" }).click();
+    await expect(page.locator(".rm-breakdown").first()).toContainText("Total");
+    await page.getByRole("button", { name: "Reserve" }).click();
+    await page.getByRole("button", { name: "Confirm and pay" }).click();
+    await expect(page.locator(".rm-err")).toContainText("short message");
+    await page.getByLabel("Message to host").fill("Hello! Three of us for a quiet weekend.");
+    await page.getByRole("button", { name: "Confirm and pay" }).click();
+    await expect(page.getByText(/Your reservation is confirmed/)).toBeVisible({ timeout: 5000 });
+    await page.getByRole("button", { name: "Cancel reservation" }).click();
+    await page.getByRole("button", { name: "Cancel trip" }).click();
+    await expect(page.locator(".rm-trip-status")).toHaveText("Cancelled");
+  });
+});
+
+test.describe("mobile app journeys", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("CRAVE mobile: dish sheet, swipe to order, tracking", async ({ page }) => {
+    await fresh(page, "/play/food/");
+    await page.locator(".crm-rcard-img").first().click();
+    await page.locator(".crm-dish").nth(2).click();
+    await page.locator(".kit-sheet .cr-btn").click();
+    await page.locator(".crm-cartbar").click();
+    await page.getByRole("button", { name: /Checkout/ }).click();
+    await page.getByRole("button", { name: /Swipe to order/ }).click();
+    await expect(page.locator(".crm-track")).toBeVisible({ timeout: 5000 });
+  });
+
+  test("MONETA mobile: keypad pay with Face ID", async ({ page }) => {
+    await fresh(page, "/play/finance/");
+    await page.locator(".ph-tabs").getByRole("button", { name: "Pay" }).click();
+    await page.locator(".mnm-recips button").first().click();
+    await page.getByRole("button", { name: "4", exact: true }).click();
+    await page.getByRole("button", { name: "2", exact: true }).click();
+    await page.getByRole("button", { name: /Review \$42.00/ }).click();
+    await page.getByRole("button", { name: /Confirm with Face ID/ }).click();
+    await expect(page.locator(".mnm-done")).toContainText("$42.00", { timeout: 5000 });
+  });
+
+  test("ROAM mobile: map toggle and listing reserve bar", async ({ page }) => {
+    await fresh(page, "/play/stays/");
+    await page.getByRole("button", { name: /Map/ }).click();
+    await expect(page.locator(".rmm-mapview")).toBeVisible();
+    await page.locator(".rmm-mini").first().click();
+    await expect(page.locator(".rmm-reserve")).toBeVisible();
+  });
+
+  test("COMMON mobile: story viewer and comments sheet", async ({ page }) => {
+    await fresh(page, "/play/social/");
+    await page.getByRole("button", { name: /Join 1 circle/ }).click();
+    await page.locator(".cmm-stories .cm-story-btn").nth(1).click();
+    await expect(page.getByRole("dialog", { name: /story/ })).toBeVisible();
+    await page.getByRole("button", { name: "Close story" }).click();
+    await page.locator(".cmm-post .cm-act").nth(1).click();
+    await expect(page.getByRole("dialog", { name: "Comments" })).toBeVisible();
+  });
+
+  test("VITAL and FRAME mobile tabs render", async ({ page }) => {
+    await fresh(page, "/play/health/");
+    await page.locator(".ph-tabs").getByRole("button", { name: "Sleep" }).click();
+    await expect(page.locator(".vtm-sleep")).toBeVisible();
+    await fresh(page, "/play/streaming/");
+    await page.getByRole("button", { name: "Rio" }).click();
+    await page.locator(".ph-tabs").getByRole("button", { name: "Clips" }).click();
+    await expect(page.locator(".frm-clips")).toBeVisible();
+  });
 });

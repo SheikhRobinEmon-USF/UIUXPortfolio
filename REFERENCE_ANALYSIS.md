@@ -39,3 +39,17 @@ The live home route again showed an application error in Chromium. The live Fun 
 The reference uses a WebGL canvas that spans the routes. This implementation uses CSS and progressive enhancement with the browser’s View Transition API. Touch, wheel, keyboard, direct links and reduced motion are verified on the implemented portfolio.
 
 The later review compared Sheikh Robin Emon’s existing portfolio with the recorded Noguier slider and case handoffs. The existing portfolio uses a long-form page with section navigation, filterable case cards, and role-based views. The new site applies the reference’s more continuous pacing to its own gallery through an opening reveal, a stronger pointer response, moving captions, and case media that responds as it enters the viewport. Noguier’s home introduction rendered briefly before the same live error returned. [Existing portfolio](https://sheikhrobinemon-usf.github.io/Portfolio/) · [Noguier home slider recording](https://dribbble.com/shots/14413496--Home-Slider) · [Noguier case transition recording](https://dribbble.com/shots/14413934-Case-To-Case)
+
+## Redesign · 21 November 2026
+
+The site was rebuilt to follow the reference's interaction language more closely. The reference site was again unreachable from the build environment, so these choices are based on the recordings and walkthrough cited above:
+
+| Reference behaviour | Implementation |
+| --- | --- |
+| Full-screen WebGL work stage with one dominant project | Hand-written WebGL renderer: subdivided planes that bend with scroll velocity, RGB split, pointer ripple, desaturated neighbours |
+| Wheel intent separated from inertia | Wheel accumulates into a target, then snaps at least one project in the gesture's direction; drag and fling on touch |
+| Scene colour and title change with the active project | `@property`-animated project colour tints the stage; huge serif title animates in letter by letter |
+| Fast navigation view | Overview grid (button or `G`), planes animate from stack to grid in WebGL |
+| Loader | Counter tied to real texture loading, curtain reveal, shown once per session |
+| Case-to-case handoff | Last section shows the next project; continued scrolling fills a ring and navigates, with the artwork carried forward |
+| Case pages return to reading | Lenis smooth scroll, masked line reveals, parallax hero |

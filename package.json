@@ -9,7 +9,8 @@
     "test:static": "node --test tests/static.test.mjs",
     "art": "node lib/generate-art.mjs",
     "audit": "node scripts/audit.mjs",
-    "capture:motion": "node scripts/capture-motion.mjs"
+    "capture:motion": "node scripts/capture-motion.mjs",
+    "capture:screens": "node scripts/capture-screens.mjs"
   },
   "dependencies": {
     "lenis": "^1.3.27",

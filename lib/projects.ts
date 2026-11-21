@@ -24,9 +24,9 @@ export const projects = [
       "Confirmation",
     ],
     signature:
-      "A product expands into an editorial detail view. Material and size stay visible throughout checkout.",
+      "A product image flies into the bag; on mobile, swipe-to-pay guards the purchase.",
     tradeoff:
-      "A curated catalogue trades breadth for clarity. Filters remain available for intentional search.",
+      "Editorial pacing trades some density for clarity; quick view keeps fast shoppers fast.",
   },
   {
     slug: "social",
@@ -52,9 +52,9 @@ export const projects = [
       "Save",
     ],
     signature:
-      "A focused composer adds a new contribution directly to the feed.",
+      "Critique posts collect feedback tagged by what it addresses — colour, composition, type.",
     tradeoff:
-      "Community filters give users control rather than hiding content behind an opaque ranking.",
+      "Circles before follower counts trades reach for relevance, especially for new members.",
   },
   {
     slug: "streaming",
@@ -78,9 +78,10 @@ export const projects = [
       "Resume",
       "Save",
     ],
-    signature: "Poster-to-detail transition and a real local sample player.",
+    signature:
+      "Hover cards grow into previews; the player resumes exactly where you left off.",
     tradeoff:
-      "Fewer shelves preserve editorial impact while search supports directed discovery.",
+      "Previews only on intent keep the interface calm and save bandwidth.",
   },
   {
     slug: "health",
@@ -104,9 +105,10 @@ export const projects = [
       "Explore trends",
       "Reflect",
     ],
-    signature: "Date-specific wellness timeline and responsive progress bars.",
+    signature:
+      "A live workout with simulated heart rate closes the rings in real time.",
     tradeoff:
-      "Simple synthetic summaries favor comprehension over clinical detail.",
+      "Plain-language insights favour encouragement over clinical precision.",
   },
   {
     slug: "finance",
@@ -130,9 +132,10 @@ export const projects = [
       "Create goal",
       "Review",
     ],
-    signature: "Connected totals and charts change with range and category.",
+    signature:
+      "A scrub-able net-worth chart, and transfers confirmed with a biometric step.",
     tradeoff:
-      "A compact dashboard provides drill-down instead of displaying every detail at once.",
+      "A deliberate review step adds friction exactly where mistakes are costly.",
   },
   {
     slug: "food",
@@ -158,9 +161,9 @@ export const projects = [
       "Track",
     ],
     signature:
-      "Meal customization updates the order total immediately, followed by simulated tracking.",
+      "Required choices validate in the dish sheet; a courier glides along the live route.",
     tradeoff:
-      "A simple staged timeline is more honest than a fake live tracking map.",
+      "A staged timeline plus an illustrative map is more honest than fake GPS precision.",
   },
   {
     slug: "stays",
@@ -185,9 +188,9 @@ export const projects = [
       "Reserve",
     ],
     signature:
-      "Linked property cards and schematic map markers with date-aware pricing.",
+      "Total-price pins on a linked map, and a calendar that won't let you cross a booked night.",
     tradeoff:
-      "A labeled illustrative map keeps the demo deterministic without pretending to offer live geographic data.",
+      "An illustrative map keeps the demo deterministic without pretending to live geography.",
   },
 ] as const;
 export type Project = (typeof projects)[number];

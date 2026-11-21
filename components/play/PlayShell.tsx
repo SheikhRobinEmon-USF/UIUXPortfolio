@@ -101,7 +101,7 @@ export default function PlayShell({ project: p, tour }: { project: Project; tour
 
   const bar = (
     <div className="demo-bar">
-      <a href={route(`/work/${p.slug}/`)} className="demo-back">
+      <a href={route(`/work/${p.slug}/`)} className="demo-back" aria-label={`Back to the ${p.name} case study`}>
         <Icon name="back" size={16} />
         <span>Case study</span>
       </a>
@@ -119,6 +119,7 @@ export default function PlayShell({ project: p, tour }: { project: Project; tour
       )}
       <button
         className="demo-reset"
+        aria-label="Reset demo data"
         onClick={() => {
           resetApp(p.slug);
           setEpoch((e) => e + 1);

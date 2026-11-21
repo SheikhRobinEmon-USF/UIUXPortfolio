@@ -1943,3 +1943,20 @@
 .mnm .mn-ctl-row {
   border-color: rgba(255, 255, 255, 0.08);
 }
+@media (max-width: 520px) {
+  .mn-me {
+    display: none;
+  }
+  .mn-top h1 {
+    font-size: 24px;
+  }
+  .mn-top-actions .mn-btn {
+    font-size: 0;
+    gap: 0;
+    width: 42px;
+    padding: 0;
+  }
+  .mn-web {
+    overflow-x: clip;
+  }
+}

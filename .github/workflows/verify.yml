@@ -25,8 +25,7 @@ jobs:
         with:
           name: portfolio-browser-evidence
           path: |
-            public/media/*-screen.jpg
-            public/media/*-detail.jpg
+            public/media/cases/*.jpg
             docs/*.jpg
             docs/*.webm
             test-results/

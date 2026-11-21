@@ -726,7 +726,7 @@ img {
 .case {
   --cbg: #f3f0e9;
   --cink: #15130f;
-  --cdim: rgba(21, 19, 15, 0.58);
+  --cdim: rgba(21, 19, 15, 0.7);
   --cline: rgba(21, 19, 15, 0.13);
   background: var(--cbg);
   color: var(--cink);
@@ -929,7 +929,7 @@ html.case-leaving .case {
   font: 400 11px var(--mono);
   color: var(--cdim);
 }
-.c-fact h3 {
+.c-fact .c-fact-h {
   margin: 40px 0 10px;
   font-size: 13px;
   font-weight: 700;
@@ -1405,6 +1405,74 @@ html.case-leaving .case {
   opacity: 0.85;
 }
 
+
+.c-gallery {
+  padding: clamp(80px, 10vw, 150px) clamp(18px, 3vw, 44px);
+  background: var(--ink);
+  color: #f3f0e9;
+  overflow: hidden;
+}
+.c-gallery-head {
+  max-width: 900px;
+  margin-bottom: 48px;
+}
+.c-gallery-head .eyebrow {
+  color: var(--paper);
+}
+.c-gallery-web {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+.c-gallery-web figure:nth-child(2) {
+  margin-top: 80px;
+}
+.c-gallery-web figure,
+.c-gphone {
+  margin: 0;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #1a1a1a;
+  box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.7);
+}
+.c-gallery-web img {
+  display: block;
+  width: 100%;
+}
+.c-gallery-phones {
+  display: flex;
+  justify-content: center;
+  gap: clamp(14px, 3vw, 40px);
+  margin-top: clamp(60px, 8vw, 120px);
+}
+.c-gphone {
+  width: min(300px, 30%);
+  padding: 8px;
+  border-radius: 44px;
+  background: linear-gradient(145deg, #3a3a3d, #111 45%, #2a2a2d);
+}
+.c-gphone img {
+  display: block;
+  width: 100%;
+  border-radius: 36px;
+}
+@media (max-width: 760px) {
+  .c-gallery-web {
+    grid-template-columns: 1fr;
+  }
+  .c-gallery-web figure:nth-child(2) {
+    margin-top: 0;
+  }
+  .c-gphone {
+    border-radius: 26px;
+    padding: 5px;
+  }
+  .c-gphone img {
+    border-radius: 22px;
+  }
+}
+
 /* ---------- About / contact ---------- */
 .profile-page {
   min-height: 100vh;
@@ -1551,7 +1619,7 @@ html.case-leaving .case {
   .c-fact + .c-fact {
     padding: 24px 0 30px;
   }
-  .c-fact h3 {
+  .c-fact .c-fact-h {
     margin-top: 16px;
   }
   .c-swatches {

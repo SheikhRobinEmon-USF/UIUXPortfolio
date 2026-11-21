@@ -1,20 +1,21 @@
 # Portfolio implementation plan
 
-Build a standalone portfolio for Sheikh Robin Emon in `SheikhRobinEmon-USF/UIUXPortfolio`. It presents seven independent products through a common project index and separate case-study and prototype routes.
+A product-design portfolio for Sheikh Robin Emon with seven independent products, each with a case study, a full web app and a native-style mobile app.
 
-1. Inspect Robin Noguier’s portfolio and the supplied brief. Record live observations, indexed evidence and inferences in [REFERENCE_ANALYSIS.md](REFERENCE_ANALYSIS.md).
-2. Build the static Next.js route structure and a project registry. Use an editorial index with a perspective stack, direct selection and responsive interaction.
-3. Implement ATELIER, COMMON, FRAME, VITAL, MONETA, CRAVE and ROAM. Use each app’s own navigation and presentation, with deterministic seed data and a resettable storage namespace.
-4. Document each project’s design decisions, assumptions, primary user flow, information architecture and visual system. Include footage or screenshots from the implemented products.
-5. Run static, Playwright, axe and Lighthouse checks. Inspect the seven target widths from 320 to 1920 pixels.
-6. Version the source and publish a private review site through Sites. Keep the delivery status and any limits in [PROJECT_STATUS.md](PROJECT_STATUS.md).
+1. Study the reference (robin-noguier.com) and record observations in [REFERENCE_ANALYSIS.md](REFERENCE_ANALYSIS.md).
+2. Build a shared foundation: UI kit (sheets, drawers, modals, toasts, charts, motion helpers), shared browser storage, and a play shell that switches between Web and Mobile app.
+3. Rebuild the homepage as a WebGL project slider with a loader, project index, overview grid, custom cursor and an image-expand transition into each case study.
+4. Rebuild case studies with smooth scroll, scroll-linked type, live embedded web + phone prototypes, a pinned journey, captured key screens, the visual system and a scroll-to-continue handoff.
+5. Build the seven products with distinct visual systems and complete flows on both platforms.
+6. Verify with static checks, Playwright journeys, overflow checks, axe and Lighthouse; document results.
 
 ## Architecture
 
-- `app/` owns the portfolio, about, contact, case study and prototype routes.
-- `components/Home.tsx` handles homepage selection and motion.
-- `components/Prototype.tsx` provides return navigation, status announcements and reset. It loads independent catalog, community and ledger modules on demand.
-- `components/prototypes/` contains workflows and reusable product components. The shared storage utility scopes records by app.
-- `lib/projects.ts` and `lib/case-studies.ts` contain the registry and editorial content.
-- `public/media/` holds original artwork, sample clips, captions and browser captures.
-- `tests/` and `scripts/` verify the production export and generate evidence.
+- `app/` — routes: home, about, contact, `work/[slug]`, `play/[slug]`.
+- `components/Home.tsx`, `components/home/` — slider, WebGL renderer (`gl.ts`) and cursor.
+- `components/case/CaseStudy.tsx` — case-study page.
+- `components/play/PlayShell.tsx` — platform switch, device frame, status bar, reset.
+- `components/kit/` — icons, UI primitives, charts, shared store (`useStore`, `useNav`).
+- `components/apps/<product>/` — `data.ts` (fixtures + store hook), `shared.tsx`, `Web.tsx`, `Mobile.tsx`, CSS.
+- `lib/` — project registry, case-study copy, tours (flows per platform) and visual systems.
+- `scripts/` — dev wrapper, Lighthouse audit, screen and motion capture.

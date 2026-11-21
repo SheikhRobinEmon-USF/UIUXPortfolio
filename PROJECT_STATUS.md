@@ -1,31 +1,22 @@
 # Project status · 21 November 2026
 
-| Phase | Status and evidence |
+| Area | Status |
 | --- | --- |
-| 0 · Reference and plan | The nine case studies were reviewed through indexed text. Four also exposed full content in the live browser. The reference homepage errored, so implementation used the behavior specified in the brief. |
-| 1 · Portfolio foundation | Next.js static export, project registry, 17 routes, scoped prototype code and browser-local state. |
-| 2 · Cinematic homepage | Seven original project previews, perspective stack, direct selector, keyboard, wheel, touch, history and reduced motion. |
-| 3 · ATELIER | Browse, gallery, variants and size, wishlist, bag, promo, checkout and order history. |
-| 4 · COMMON | Feed, explore, circles, local-image composer, posting, comments, profile, messaging and activity. |
-| 5 · FRAME | Browse and shelves, title detail, viewer selection, watchlist, history, playback and episode captions. |
-| 6 · VITAL | Dated activity, sleep and nutrition logs, habits, goals, trend controls, journal and preferences. |
-| 7 · MONETA | Fictional accounts, transactions, analytics, budgets, recurring expenses, savings and local transfers. |
-| 8 · CRAVE | Restaurant discovery, menus, meal options, cart, local checkout, tracked events and reorder. |
-| 9 · ROAM | Destination browse, filters, linked map/list, property detail, date and capacity validation, booking and trip management. |
-| 10 · Case studies | Seven studies. Each includes the implemented journey, references, design rationale and two actual prototype captures. |
-| 11 · Portfolio polish | About and Contact, shared-element motion, responsive project picker and previous/next navigation. |
-| 12 · Validation | Production build, static checks and 17 Playwright tests. Axe results, nine mobile Lighthouse audits and captured motion are recorded in [validation](docs/VALIDATION.md). |
+| Foundation | Shared UI kit, motion helpers, charts, local store shared across platforms, play shell with Web / Mobile app switch, device frame and live status bar. |
+| Homepage | Loader with real texture progress, WebGL slider (inertia, velocity bend, RGB split, pointer ripple), per-project colour, letter-by-letter titles, project index, overview grid (G / Esc), custom cursor, image-expand transition, touch swipe and reduced-motion fallback. |
+| Case studies | Smooth scroll, scroll-lit overview, live embedded web + phone prototypes, pinned horizontal journey, captured key screens, wireframes, visual system, outcome and a scroll-to-continue handoff to the next project. |
+| ATELIER | Web and mobile complete (see README). |
+| COMMON | Web and mobile complete. |
+| FRAME | Web and mobile complete. |
+| VITAL | Web and mobile complete. |
+| MONETA | Web and mobile complete. |
+| CRAVE | Web and mobile complete. |
+| ROAM | Web and mobile complete. |
+| Validation | 19 Playwright tests, static checks, axe, overflow at seven widths, Lighthouse sample — see [validation](docs/VALIDATION.md). |
 
 ## Known limits
 
-- Five of the nine measured routes exceeded the 2.5-second simulated-mobile LCP target. Their scores and metrics are recorded in the validation report.
-- The reference homepage rendered an error. The separate “UI UX Portfolio Links” chat and reference screenshot were unavailable in this session.
-- The prototypes use synthetic data and in-browser simulations. Case study hypotheses and personas are illustrative. No recruited usability sessions or business outcomes were reported.
-
-## Reproduction
-
-Run `npm ci`, `npm run build`, `npm run test:static`, and `npm test` after installing Playwright Chromium. The browser suite captures portfolio documentation images. Rebuild the static export to incorporate new captures. Use `npm run audit` for repeatable lab metrics. Source and hosting settings live in this repository, with `.openai/hosting.json` identifying the owner-private Sites project.
-
-## Interaction and demo revision
-
-The project gallery now follows wheel intent and touch displacement, coordinates its active marker and artwork, and carries artwork and titles between case studies. The Connect page uses United States and links to the publicly verified email, LinkedIn and GitHub profiles. The seven demos apply distinct research-backed workflows documented in [product design research](docs/PRODUCT_DESIGN_RESEARCH.md).
+- robin-noguier.com could not be loaded from the build environment (network blocked); the interaction language follows the recorded analysis in [REFERENCE_ANALYSIS.md](REFERENCE_ANALYSIS.md).
+- All products use fictional data, simulated payments, couriers, heart rate and messaging. Personas and hypotheses are illustrative; no usability study was run.
+- Some product imagery is shared or colour-tinted across products because the asset library is small; colourways in ATELIER are CSS tints of one photograph.
+- Simulated-mobile LCP is around 3.0–3.5 s on the measured routes (image- and font-heavy pages).

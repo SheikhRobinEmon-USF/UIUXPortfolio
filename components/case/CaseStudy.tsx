@@ -66,7 +66,7 @@ function ScrollText({ text }: { text: string }) {
   );
 }
 function Word({ children, progress, range }: { children: string; progress: MotionValue<number>; range: [number, number] }) {
-  const opacity = useTransform(progress, range, [0.16, 1]);
+  const opacity = useTransform(progress, range, [0.25, 1]);
   return (
     <>
       <motion.span style={{ opacity }}>{children}</motion.span>{" "}
@@ -146,6 +146,41 @@ function Journey({ tour, color }: { tour: Tour; color: string }) {
         <div className="c-journey-bar">
           <motion.i style={{ scaleX: scrollYProgress }} />
         </div>
+      </div>
+    </section>
+  );
+}
+
+
+function Gallery({ slug, name }: { slug: string; name: string }) {
+  const ref = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  const y1 = useTransform(scrollYProgress, [0, 1], [80, -80]);
+  const y2 = useTransform(scrollYProgress, [0, 1], [160, -120]);
+  const y3 = useTransform(scrollYProgress, [0, 1], [40, -40]);
+  const shot = (n: string) => route(`/media/cases/${slug}-${n}.jpg`);
+  return (
+    <section className="c-gallery" ref={ref}>
+      <div className="c-gallery-head">
+        <span className="eyebrow">05 — Key screens</span>
+        <Lines text="Selected moments from both apps." />
+      </div>
+      <div className="c-gallery-web">
+        <motion.figure style={{ y: y3 }}>
+          <div className="c-browser-bar" aria-hidden="true"><i /><i /><i /><span>{name.toLowerCase()}.app</span></div>
+          <img src={shot("web-1")} alt={`${name} web — home`} loading="lazy" />
+        </motion.figure>
+        <motion.figure style={{ y: y1 }}>
+          <div className="c-browser-bar" aria-hidden="true"><i /><i /><i /><span>{name.toLowerCase()}.app</span></div>
+          <img src={shot("web-2")} alt={`${name} web — detail`} loading="lazy" />
+        </motion.figure>
+      </div>
+      <div className="c-gallery-phones">
+        {["mobile-1", "mobile-2", "mobile-3"].map((n, i) => (
+          <motion.figure key={n} className="c-gphone" style={{ y: i === 1 ? y2 : y1 }}>
+            <img src={shot(n)} alt={`${name} mobile — screen ${i + 1}`} loading="lazy" />
+          </motion.figure>
+        ))}
       </div>
     </section>
   );
@@ -339,7 +374,7 @@ export default function CaseStudy({
         ].map(([k, v], i) => (
           <Reveal key={k} delay={i * 0.08} className="c-fact">
             <span className="c-fact-n">{pad(i + 1)}</span>
-            <h3>{k}</h3>
+            <h2 className="c-fact-h">{k}</h2>
             <p>{v}</p>
           </Reveal>
         ))}
@@ -395,9 +430,11 @@ export default function CaseStudy({
 
       <Journey tour={tour} color={project.color} />
 
+      <Gallery slug={project.slug} name={project.name} />
+
       <section className="c-wire">
         <div className="c-wire-head">
-          <span className="eyebrow">05 — Structure</span>
+          <span className="eyebrow">06 — Structure</span>
           <Lines text="Low-fidelity first, so the hierarchy is settled before the pixels." />
         </div>
         <div className="c-wire-grid">
@@ -420,7 +457,7 @@ export default function CaseStudy({
 
       <section className="c-system" style={{ "--display": system.display.css } as CSSProperties}>
         <div className="c-system-head">
-          <span className="eyebrow">06 — Visual system</span>
+          <span className="eyebrow">07 — Visual system</span>
           <Lines text={`The ${project.name} design language.`} />
           <p>{content.identity}</p>
         </div>
@@ -465,7 +502,7 @@ export default function CaseStudy({
 
       <section className="c-outcome">
         <div>
-          <span className="eyebrow">07 — Outcome</span>
+          <span className="eyebrow">08 — Outcome</span>
           <Lines text="What the prototype proves — and what it doesn't yet." />
         </div>
         <div className="c-outcome-cols">
