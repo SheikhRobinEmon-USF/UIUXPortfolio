@@ -1,5 +1,6 @@
 /* ===== Prototype shell ===== */
 .play {
+  --bar-h: 52px;
   min-height: 100vh;
   background: #0e0e0f;
   color: #f4f1ea;
@@ -284,6 +285,37 @@
   --safe-top: 8px;
   --safe-bottom: max(8px, env(safe-area-inset-bottom));
   border-radius: 0;
+}
+.play.handheld {
+  --bar-h: 44px;
+}
+.play.embed {
+  --bar-h: 0px;
+}
+.embed .device-stage {
+  display: block;
+  min-height: 0;
+  padding: 0;
+  background: none;
+}
+.embed .phone {
+  width: 100%;
+  height: 100vh;
+  min-height: 0;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.embed .phone::before,
+.embed .phone::after {
+  display: none;
+}
+.embed .phone-screen {
+  border-radius: 0;
+}
+.embed .demo-bar {
+  display: none;
 }
 @media (max-width: 1180px) and (min-width: 701px) {
   .device-stage {

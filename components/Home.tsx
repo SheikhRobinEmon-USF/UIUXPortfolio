@@ -1,391 +1,515 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-  type PointerEvent as ReactPointerEvent,
-} from "react";
-import PortfolioTransitions from "./PortfolioTransitions";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { projects, route, projectArtwork } from "../lib/projects";
+import { SliderGL, type Plane } from "./home/gl";
+import Cursor from "./home/Cursor";
 
-const pad = (number: number) => String(number).padStart(2, "0");
-const lastIndex = projects.length - 1;
+const pad = (n: number) => String(n).padStart(2, "0");
+const N = projects.length;
+const ease = [0.22, 1, 0.36, 1] as const;
+const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+type Layout = Plane & { scale: number };
+
+/** Where every project plane sits for a given scroll position and mode. */
+function layout(i: number, current: number, grid: number, vw: number, vh: number, mobile: boolean): Layout {
+  const d = i - current;
+  const ad = Math.abs(d);
+  let x: number, y: number, w: number, h: number;
+  if (mobile) {
+    w = vw * 0.8;
+    h = w * 0.66;
+    x = d * (w + 18);
+    y = -vh * 0.1;
+  } else {
+    w = Math.min(vw * 0.5, 980);
+    h = w * 0.56;
+    const gap = vh * 0.16;
+    x = -vw * 0.035;
+    y = d * (h + gap) - vh * 0.05;
+  }
+  const s = 1 - Math.min(ad, 2) * (mobile ? 0.08 : 0.14);
+  w *= s;
+  h *= s;
+  if (grid > 0) {
+    const cols = mobile ? 2 : 4;
+    const gw = mobile ? vw * 0.42 : Math.min(vw * 0.19, 340);
+    const gh = gw * 0.62;
+    const gapX = mobile ? 12 : 28;
+    const gapY = mobile ? 54 : 70;
+    const row = Math.floor(i / cols);
+    const rows = Math.ceil(N / cols);
+    const inRow = Math.min(cols, N - row * cols);
+    const col = i % cols;
+    const gx = (col - (inRow - 1) / 2) * (gw + gapX);
+    const gy = (row - (rows - 1) / 2) * (gh + gapY) + (mobile ? 0 : vh * 0.02);
+    x = lerp(x, gx, grid);
+    y = lerp(y, gy, grid);
+    w = lerp(w, gw, grid);
+    h = lerp(h, gh, grid);
+  }
+  const alpha = lerp(clamp(1 - ad * (mobile ? 0.35 : 0.5), 0.12, 1), 1, grid);
+  return { x, y, w, h, alpha, gray: lerp(clamp(ad, 0, 1) * 0.85, 0, grid), hover: 0, scale: s };
+}
 
 export default function Home() {
   const [active, setActive] = useState(0);
-  const wheel = useRef({
-    total: 0,
-    time: 0,
-    direction: 0,
-    magnitude: 0,
-    committed: false,
+  const [grid, setGrid] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [progress, setProgress] = useState(0);
+  const [glFailed, setGlFailed] = useState(false);
+  const [leaving, setLeaving] = useState<string | null>(null);
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const links = useRef<(HTMLAnchorElement | null)[]>([]);
+  const state = useRef({
+    current: 0,
+    target: 0,
+    vel: 0,
+    grid: 0,
+    gridTarget: 0,
+    intro: 0,
+    wheelTimer: 0 as any,
+    wheelFrom: null as number | null,
+    drag: null as null | { start: number; startTarget: number; moved: number; t: number; last: number; v: number },
+    mouse: Array.from({ length: N }, () => [0.5, 0.5] as [number, number]),
+    hover: Array.from({ length: N }, () => 0),
+    hoverTarget: -1,
+    mobile: false,
+    reduced: false,
   });
-  const touch = useRef<{
-    x: number;
-    y: number;
-    time: number;
-    href: string | null;
-    horizontal: boolean;
-  } | null>(null);
-  const previewFrame = useRef(0);
-  const artwork = useRef<HTMLDivElement>(null);
   const project = projects[active];
 
-  const select = useCallback((index: number) => {
-    const next = Math.max(0, Math.min(lastIndex, index));
-    setActive(next);
-    try {
-      sessionStorage.setItem("sre:active-project", projects[next].slug);
-    } catch {}
+  const select = useCallback((i: number) => {
+    const s = state.current;
+    s.target = clamp(i, 0, N - 1);
+    if (s.reduced) s.current = s.target;
   }, []);
 
+  /* Restore the last viewed project and decide whether to show the loader. */
   useEffect(() => {
-    let slug = new URLSearchParams(window.location.search).get("project");
+    const s = state.current;
+    s.reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let slug = new URLSearchParams(location.search).get("project");
     try {
       slug ||= sessionStorage.getItem("sre:active-project");
     } catch {}
-    const index = projects.findIndex((item) => item.slug === slug);
-    if (index >= 0) setActive(index);
+    const i = projects.findIndex((p) => p.slug === slug);
+    if (i >= 0) {
+      s.current = s.target = i;
+      setActive(i);
+    }
+    let seen = false;
+    try {
+      seen = sessionStorage.getItem("sre:intro") === "1";
+    } catch {}
+    if (seen || s.reduced) {
+      setLoading(false);
+      s.intro = 1;
+    }
   }, []);
 
   useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey)
-        return;
-      const target = event.target as HTMLElement | null;
-      if (target?.closest("input, textarea, select, [contenteditable]")) return;
-      const direction = ["ArrowDown", "ArrowRight"].includes(event.key)
-        ? 1
-        : ["ArrowUp", "ArrowLeft"].includes(event.key)
-          ? -1
-          : 0;
-      if (direction) {
-        event.preventDefault();
-        select(active + direction);
-      }
-      if (event.key === "Enter" && !target?.closest("button, a")) {
-        window.location.assign(route(`/work/${project.slug}/`));
-      }
-    }
+    try {
+      sessionStorage.setItem("sre:active-project", projects[active].slug);
+    } catch {}
+  }, [active]);
 
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [active, project.slug, select]);
-
+  /* Animation loop: physics + WebGL + DOM hit targets. */
   useEffect(() => {
-    function onWheel(event: WheelEvent) {
-      if (
-        event.ctrlKey ||
-        !event.deltaY ||
-        Math.abs(event.deltaY) < Math.abs(event.deltaX)
-      )
-        return;
-      const target = event.target as Element | null;
-      if (
-        target?.closest?.(".portfolio-header, .home-footer") ||
-        window.innerWidth <= 800
-      )
-        return;
-
-      const now = performance.now();
-      const direction = Math.sign(event.deltaY);
-      const magnitude = Math.abs(
-        event.deltaY *
-          (event.deltaMode === 1
-            ? 16
-            : event.deltaMode === 2
-              ? innerHeight
-              : 1),
+    const s = state.current;
+    let gl: SliderGL | null = null;
+    let loaded = 0;
+    const start = performance.now();
+    try {
+      gl = new SliderGL(
+        canvas.current!,
+        projects.map((p) => projectArtwork(p.slug).src),
+        (n) => {
+          loaded = n;
+          setProgress(n / N);
+        },
       );
-      const gesture = wheel.current;
-      const idle = now - gesture.time;
-      const deliberateReversal =
-        direction !== gesture.direction && magnitude >= 12;
-      const newImpulse =
-        idle > 72 && magnitude > Math.max(28, gesture.magnitude * 1.85);
-      const slowingTail =
-        gesture.committed &&
-        direction === gesture.direction &&
-        idle < 320 &&
-        magnitude < gesture.magnitude * 0.78;
-      if ((idle > 155 && !slowingTail) || deliberateReversal || newImpulse) {
-        gesture.total = 0;
-        gesture.direction = direction;
-        gesture.committed = false;
+    } catch {
+      setGlFailed(true);
+      setProgress(1);
+    }
+    const onResize = () => {
+      s.mobile = innerWidth <= 800;
+      gl?.resize();
+    };
+    onResize();
+    window.addEventListener("resize", onResize);
+    let raf = 0;
+    let lastActive = -1;
+    const tick = (now: number) => {
+      raf = requestAnimationFrame(tick);
+      const vw = innerWidth;
+      const vh = innerHeight;
+      const k = s.reduced ? 1 : 0.085;
+      const prev = s.current;
+      if (!s.drag) s.current = lerp(s.current, s.target, k);
+      s.vel = lerp(s.vel, clamp((s.current - prev) * 9, -1.2, 1.2), 0.25);
+      s.grid = lerp(s.grid, s.gridTarget, s.reduced ? 1 : 0.09);
+      if (loaded >= N || !gl) s.intro = lerp(s.intro, loadingRef.current ? 0 : 1, 0.05);
+      const nearest = clamp(Math.round(s.current), 0, N - 1);
+      if (nearest !== lastActive) {
+        lastActive = nearest;
+        setActive(nearest);
       }
-      gesture.time = now;
-      gesture.magnitude = magnitude;
+      const planes: Plane[] = projects.map((_, i) => {
+        const l = layout(i, s.current, s.grid, vw, vh, s.mobile);
+        s.hover[i] = lerp(s.hover[i], s.hoverTarget === i ? 1 : 0, 0.08);
+        const introScale = lerp(0.82, 1, s.intro);
+        const p: Plane = { ...l, w: l.w * introScale, h: l.h * introScale, y: l.y + (1 - s.intro) * vh * 0.12 * (i - s.current + 1), alpha: l.alpha * s.intro, hover: s.hover[i] };
+        const a = links.current[i];
+        if (a) {
+          a.style.transform = `translate(${vw / 2 + p.x - p.w / 2}px, ${vh / 2 + p.y - p.h / 2}px)`;
+          a.style.width = p.w + "px";
+          a.style.height = p.h + "px";
+          a.style.opacity = gl ? "" : String(p.alpha);
+        }
+        return p;
+      });
+      gl?.draw(planes, s.mobile ? 0 : s.vel, s.mobile ? s.vel : 0, (now - start) / 1000, s.mouse);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", onResize);
+      gl?.destroy();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-      if (gesture.committed || direction !== gesture.direction) return;
-      gesture.total += magnitude;
-      if (gesture.total >= 39) {
-        gesture.committed = true;
-        select(active + direction);
+  const loadingRef = useRef(loading);
+  loadingRef.current = loading;
+
+  /* Loader finishes when textures are ready (minimum 1.6 s for the count). */
+  useEffect(() => {
+    if (!loading) return;
+    const t0 = performance.now();
+    let raf = 0;
+    const el = document.querySelector<HTMLElement>(".loader-count");
+    let shown = 0;
+    const step = () => {
+      const timeP = Math.min(1, (performance.now() - t0) / 1600);
+      shown = lerp(shown, Math.min(timeP, progress || 0.05), 0.12);
+      if (el) el.textContent = String(Math.round(shown * 100)).padStart(3, "0");
+      if (shown > 0.995 && progress >= 1) {
+        try {
+          sessionStorage.setItem("sre:intro", "1");
+        } catch {}
+        setTimeout(() => setLoading(false), 250);
+        return;
+      }
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [loading, progress]);
+
+  /* Wheel, keyboard and drag input. */
+  useEffect(() => {
+    const s = state.current;
+    function onWheel(e: WheelEvent) {
+      if (s.gridTarget || e.ctrlKey) return;
+      const target = e.target as Element;
+      if (target.closest?.(".home-header, .home-index, .home-bottom")) return;
+      const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? innerHeight : 1;
+      if (s.wheelFrom == null) s.wheelFrom = Math.round(s.current);
+      s.target = clamp(s.target + (delta * unit) / 700, -0.3, N - 0.7);
+      clearTimeout(s.wheelTimer);
+      s.wheelTimer = setTimeout(() => {
+        // Any deliberate gesture moves at least one project in its direction.
+        const from = s.wheelFrom ?? Math.round(s.target);
+        const moved = s.target - from;
+        const steps = Math.abs(moved) < 0.08 ? 0 : Math.sign(moved) * Math.max(1, Math.round(Math.abs(moved)));
+        s.target = clamp(from + steps, 0, N - 1);
+        s.wheelFrom = null;
+      }, 130);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if ((e.target as HTMLElement)?.closest("input, textarea")) return;
+      if (["ArrowDown", "ArrowRight", "PageDown"].includes(e.key)) {
+        e.preventDefault();
+        select(Math.round(s.target) + 1);
+      } else if (["ArrowUp", "ArrowLeft", "PageUp"].includes(e.key)) {
+        e.preventDefault();
+        select(Math.round(s.target) - 1);
+      } else if (e.key.toLowerCase() === "g") {
+        toggleGrid();
+      } else if (e.key === "Escape" && s.gridTarget) {
+        toggleGrid(false);
       }
     }
-
     window.addEventListener("wheel", onWheel, { passive: true });
-    return () => window.removeEventListener("wheel", onWheel);
-  }, [active, select]);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("keydown", onKey);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [select]);
 
-  useEffect(() => () => cancelAnimationFrame(previewFrame.current), []);
+  function toggleGrid(on?: boolean) {
+    const s = state.current;
+    const next = on ?? !s.gridTarget;
+    s.gridTarget = next ? 1 : 0;
+    setGrid(next);
+  }
 
-  function followPointer(event: ReactPointerEvent<HTMLDivElement>) {
-    if (
-      event.pointerType !== "mouse" ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    )
+  function onPointerDown(e: React.PointerEvent) {
+    const s = state.current;
+    if (s.gridTarget || e.button !== 0) return;
+    const pos = s.mobile ? e.clientX : e.clientY;
+    s.drag = { start: pos, startTarget: s.current, moved: 0, t: performance.now(), last: pos, v: 0 };
+  }
+  function onPointerMove(e: React.PointerEvent) {
+    const s = state.current;
+    // pointer uv over the hovered plane for the ripple
+    const el = (e.target as Element).closest<HTMLAnchorElement>("[data-plane]");
+    const idx = el ? Number(el.dataset.plane) : -1;
+    s.hoverTarget = idx === Math.round(s.current) || s.gridTarget ? idx : -1;
+    if (el) {
+      const r = el.getBoundingClientRect();
+      s.mouse[idx] = [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height];
+    }
+    if (!s.drag) return;
+    const pos = s.mobile ? e.clientX : e.clientY;
+    const now = performance.now();
+    const unit = s.mobile ? innerWidth * 0.8 : innerHeight * 0.45;
+    s.drag.v = (pos - s.drag.last) / Math.max(1, now - s.drag.t);
+    s.drag.t = now;
+    s.drag.last = pos;
+    s.drag.moved = Math.max(s.drag.moved, Math.abs(pos - s.drag.start));
+    s.current = clamp(s.drag.startTarget - (pos - s.drag.start) / unit, -0.3, N - 0.7);
+    s.target = s.current;
+  }
+  function onPointerUp() {
+    const s = state.current;
+    if (!s.drag) return;
+    const fling = -s.drag.v * 0.9;
+    const moved = s.drag.moved;
+    s.drag = null;
+    if (moved > 6) {
+      s.target = clamp(Math.round(s.current + clamp(fling, -1, 1)), 0, N - 1);
+      suppressClick.current = true;
+      setTimeout(() => (suppressClick.current = false), 50);
+    }
+  }
+  const suppressClick = useRef(false);
+
+  function open(i: number, e: React.MouseEvent<HTMLAnchorElement>) {
+    e.preventDefault();
+    const s = state.current;
+    if (suppressClick.current) return;
+    if (s.gridTarget) {
+      s.current = s.target = i;
+      toggleGrid(false);
       return;
-    const current =
-      event.currentTarget.querySelector<HTMLElement>(".preview.current");
-    if (!current) return;
-    const bounds = current.getBoundingClientRect();
-    const x = (event.clientX - bounds.left) / bounds.width - 0.5;
-    const y = (event.clientY - bounds.top) / bounds.height - 0.5;
-    if (Math.abs(x) > 0.5 || Math.abs(y) > 0.5) return;
-    cancelAnimationFrame(previewFrame.current);
-    previewFrame.current = requestAnimationFrame(() => {
-      current.style.setProperty("--look-x", `${x * -34}px`);
-      current.style.setProperty("--look-y", `${y * -26}px`);
-      current.style.setProperty("--light-x", `${(x + 0.5) * 100}%`);
-      current.style.setProperty("--light-y", `${(y + 0.5) * 100}%`);
-    });
+    }
+    if (i !== Math.round(s.current)) {
+      select(i);
+      return;
+    }
+    const href = route(`/work/${projects[i].slug}/`);
+    if (s.reduced) {
+      location.assign(href);
+      return;
+    }
+    // Expand the artwork to fill the screen, then continue into the case study.
+    const r = e.currentTarget.getBoundingClientRect();
+    const ghost = document.createElement("div");
+    ghost.className = "home-expand";
+    ghost.style.setProperty("--img", `url(${projectArtwork(projects[i].slug).src})`);
+    ghost.style.background = projects[i].color;
+    document.body.appendChild(ghost);
+    const from = `inset(${r.top}px ${innerWidth - r.right}px ${innerHeight - r.bottom}px ${r.left}px)`;
+    ghost.animate([{ clipPath: from }, { clipPath: "inset(0px 0px 0px 0px)" }], { duration: 900, easing: "cubic-bezier(.77,0,.18,1)", fill: "forwards" });
+    setLeaving(projects[i].slug);
+    try {
+      sessionStorage.setItem("sre:from-home", projects[i].slug);
+    } catch {}
+    setTimeout(() => location.assign(href), 880);
   }
 
-  function resetDrag() {
-    artwork.current?.removeAttribute("data-dragging");
-    artwork.current?.style.removeProperty("--drag");
-  }
+  const letters = project.name.split("");
 
   return (
     <main
       id="main"
-      className="portfolio"
-      style={{ "--project": project.color } as CSSProperties}
+      className={`home ${grid ? "is-grid" : ""} ${glFailed ? "no-gl" : ""} ${leaving ? "is-leaving" : ""}`}
+      style={{ "--project": project.color, "--project-ink": project.ink } as CSSProperties}
+      data-cursor-zone
     >
-      <PortfolioTransitions />
-      <header className="portfolio-header">
-        <a href={route("/")} className="identity">
-          <span className="identity-mark" aria-hidden="true">
-            S<span>·</span>E
-          </span>
-          <span className="identity-name">
-            Sheikh Robin Emon<small>Digital product designer</small>
-          </span>
+      <Cursor />
+      <AnimatePresence>
+        {loading && (
+          <motion.div className="loader" exit={{ clipPath: "inset(0 0 100% 0)" }} transition={{ duration: 1.1, ease: [0.77, 0, 0.18, 1] }}>
+            <div className="loader-name">
+              <motion.span initial={{ y: "105%" }} animate={{ y: 0 }} transition={{ duration: 1, ease }}>
+                Sheikh Robin Emon
+              </motion.span>
+            </div>
+            <div className="loader-meta">
+              <span>Product designer · Portfolio 2026</span>
+              <span className="loader-count">000</span>
+            </div>
+            <motion.div className="loader-bar" initial={{ scaleX: 0 }} animate={{ scaleX: progress }} transition={{ duration: 0.6 }} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <canvas ref={canvas} className="home-canvas" aria-hidden="true" />
+
+      <div
+        className="home-planes"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        onPointerLeave={() => {
+          state.current.hoverTarget = -1;
+          onPointerUp();
+        }}
+        data-cursor={grid ? "Open" : "Drag"}
+      >
+        {projects.map((p, i) => (
+          <a
+            key={p.slug}
+            ref={(el) => {
+              links.current[i] = el;
+            }}
+            data-plane={i}
+            data-cursor={grid ? p.name : i === active ? "View" : "Select"}
+            className={`home-plane ${i === active ? "active" : ""}`}
+            href={route(`/work/${p.slug}/`)}
+            onClick={(e) => open(i, e)}
+            tabIndex={grid || i === active ? 0 : -1}
+            aria-label={`${p.name} — ${p.tag}. ${i === active ? "Open case study" : "Select project"}`}
+            draggable={false}
+          >
+            <img {...projectArtwork(p.slug)} sizes="50vw" alt="" draggable={false} />
+            {grid && (
+              <span className="home-plane-label">
+                <small>{pad(i + 1)}</small>
+                {p.name}
+              </span>
+            )}
+          </a>
+        ))}
+      </div>
+
+      <header className="home-header">
+        <a href={route("/")} className="home-id">
+          <strong>Sheikh Robin Emon</strong>
+          <span>Product designer — UI/UX, interaction & front-end</span>
         </a>
         <nav aria-label="Portfolio">
+          <button className={`home-grid-btn ${grid ? "on" : ""}`} onClick={() => toggleGrid()} aria-pressed={grid}>
+            <span className="home-grid-icon" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+              <i />
+            </span>
+            {grid ? "Close" : "Overview"}
+          </button>
           <a href={route("/about/")}>About</a>
-          <a href={route("/contact/")}>Connect</a>
+          <a href={route("/contact/")}>Contact</a>
         </nav>
       </header>
 
-      <div className="home-stage">
-        <div className="home-heading">
-          <span className="eyebrow">Independent UI/UX portfolio</span>
-          <div className="home-title">
-            Selected <em>work.</em>
-          </div>
-        </div>
-
-        <div
-          className="stack"
-          ref={artwork}
-          aria-label="Project previews"
-          onPointerMove={followPointer}
-          onPointerLeave={() => cancelAnimationFrame(previewFrame.current)}
-          onTouchStart={(event) => {
-            if (event.touches.length !== 1) {
-              touch.current = null;
-              return;
-            }
-            const target = event.target as Element;
-            touch.current = {
-              x: event.touches[0].clientX,
-              y: event.touches[0].clientY,
-              time: performance.now(),
-              horizontal: false,
-              href:
-                target.closest<HTMLAnchorElement>(".preview.current")?.href ??
-                null,
-            };
-          }}
-          onTouchMove={(event) => {
-            const start = touch.current;
-            if (
-              !start ||
-              event.touches.length !== 1 ||
-              window.matchMedia("(prefers-reduced-motion: reduce)").matches
-            )
-              return;
-            const finger = event.touches[0];
-            const x = finger.clientX - start.x;
-            const y = finger.clientY - start.y;
-            start.horizontal ||=
-              Math.abs(x) > 9 && Math.abs(x) > Math.abs(y) * 1.25;
-            if (!start.horizontal) return;
-            const resistance =
-              (active === 0 && x > 0) || (active === lastIndex && x < 0)
-                ? 0.18
-                : 0.78;
-            event.currentTarget.dataset.dragging = "";
-            event.currentTarget.style.setProperty(
-              "--drag",
-              `${x * resistance}px`,
-            );
-          }}
-          onTouchCancel={() => {
-            touch.current = null;
-            resetDrag();
-          }}
-          onTouchEnd={(event) => {
-            const start = touch.current;
-            touch.current = null;
-            resetDrag();
-            if (!start || event.touches.length) return;
-            const end = event.changedTouches[0];
-            const dx = start.x - end.clientX;
-            const dy = start.y - end.clientY;
-            const elapsed = performance.now() - start.time;
-            const flick = elapsed < 230 && Math.abs(dx) > 28;
-            if (
-              (Math.abs(dx) > 54 || flick) &&
-              Math.abs(dx) > Math.abs(dy) * 1.15
-            ) {
-              event.preventDefault();
-              select(active + Math.sign(dx));
-              return;
-            }
-            const target = event.target as Element;
-            const link = target.closest<HTMLAnchorElement>(".preview.current");
-            if (
-              start.href &&
-              link?.href === start.href &&
-              Math.hypot(dx, dy) < 10 &&
-              performance.now() - start.time < 550
-            ) {
-              event.preventDefault();
-              window.location.assign(start.href);
-            }
-          }}
-        >
-          {projects.map((item, index) => {
-            const offset = index - active;
-            const selected = offset === 0;
-            return (
-              <a
-                key={item.slug}
-                className={`preview${selected ? " current" : Math.abs(offset) === 1 ? " adjacent" : ""}`}
-                style={
-                  {
-                    "--offset": offset,
-                    "--distance": Math.abs(offset),
-                    "--paper": item.color,
-                  } as CSSProperties
-                }
-                href={route(`/work/${item.slug}/`)}
-                tabIndex={selected ? 0 : -1}
-                aria-hidden={!selected}
-                onClick={(event) => {
-                  if (!selected) {
-                    event.preventDefault();
-                    select(index);
-                  }
-                }}
-              >
-                <img
-                  {...projectArtwork(item.slug)}
-                  sizes="(max-width: 800px) 90vw, 70vw"
-                  alt=""
-                  loading={index < 2 ? "eager" : "lazy"}
-                  fetchPriority={index === 0 ? "high" : "low"}
-                />
-                <div className="preview-caption">
-                  <span>{item.tag}</span>
-                  <strong>
-                    {item.name}
-                    <i>.</i>
-                  </strong>
-                </div>
-                <span className="preview-open" aria-hidden="true">
-                  +
+      <div className="home-title" aria-live="polite">
+        <AnimatePresence mode="popLayout" initial={false}>
+          {!grid && (
+            <motion.h1 key={project.slug} className="home-name" aria-label={project.name} exit={{ opacity: 0, transition: { duration: 0.3 } }}>
+              {letters.map((ch, i) => (
+                <span className="home-char-mask" key={i} aria-hidden="true">
+                  <motion.span initial={{ y: "105%", rotate: 4 }} animate={{ y: "0%", rotate: 0 }} exit={{ y: "-105%" }} transition={{ duration: 0.9, ease, delay: (loading ? 0.6 : 0.05) + i * 0.035 }}>
+                    {ch}
+                  </motion.span>
                 </span>
-              </a>
-            );
-          })}
-        </div>
-
-        <nav
-          className="project-menu"
-          aria-label="Select project"
-          style={{ "--active-index": active } as CSSProperties}
-        >
-          <span className="menu-heading">Project index</span>
-          <div className="project-menu-list">
-            <span className="project-menu-marker" aria-hidden="true" />
-            {projects.map((item, index) => (
-              <button
-                key={item.slug}
-                onClick={() => select(index)}
-                aria-current={active === index ? "true" : undefined}
-              >
-                <span>{pad(index + 1)}</span>
-                {item.label}
-                <i />
-              </button>
-            ))}
-          </div>
-        </nav>
-
-        <div className="left-copy" aria-live="polite">
-          <h1 key={project.slug}>
-            {project.name}
-            <span>.</span>
-          </h1>
-          <p key={`${project.slug}-summary`}>{project.line}</p>
-          <div className="project-links">
-            <a className="text-link" href={route(`/work/${project.slug}/`)}>
-              View case study
-            </a>
-            <a
-              className="secondary-link"
-              href={route(`/play/${project.slug}/`)}
-            >
-              Try the prototype
-            </a>
-          </div>
-        </div>
+              ))}
+              <motion.i className="home-dot" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.4, type: "spring", stiffness: 400, damping: 20 }}>
+                .
+              </motion.i>
+            </motion.h1>
+          )}
+          {grid && (
+            <motion.h1 key="grid" className="home-name small" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+              Seven products<i className="home-dot">.</i>
+            </motion.h1>
+          )}
+        </AnimatePresence>
       </div>
 
-      <footer className="home-footer">
-        <span>PRODUCT DESIGN · INTERACTION · FRONTEND</span>
-        <div className="project-controls">
-          <button
-            aria-label="Previous project"
-            onClick={() => select(active - 1)}
-            disabled={active === 0}
-          >
-            <span className="project-step-icon" aria-hidden="true">
-              ↑
+      <div className="home-bottom">
+        <AnimatePresence mode="wait">
+          <motion.div key={project.slug} className="home-info" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.5, ease }}>
+            <span className="home-tag">
+              {pad(active + 1)} — {project.label}
             </span>
-          </button>
-          <span>
-            {pad(active + 1)} / {pad(projects.length)}
-          </span>
-          <button
-            aria-label="Next project"
-            onClick={() => select(active + 1)}
-            disabled={active === lastIndex}
-          >
-            <span className="project-step-icon" aria-hidden="true">
-              ↓
-            </span>
-          </button>
+            <p>
+              {project.line} <span>{project.tag}.</span>
+            </p>
+            <div className="home-ctas">
+              <a href={route(`/work/${project.slug}/`)} className="home-cta" onClick={(e) => {
+                const el = links.current[active];
+                if (el) {
+                  e.preventDefault();
+                  el.click();
+                }
+              }}>
+                <span>Case study</span>
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.6" /></svg>
+              </a>
+              <a href={route(`/play/${project.slug}/?view=web`)} className="home-cta ghost">
+                Web prototype
+              </a>
+              <a href={route(`/play/${project.slug}/?view=mobile`)} className="home-cta ghost">
+                Mobile app
+              </a>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+        <div className="home-progress" aria-hidden="true">
+          <span>{pad(active + 1)}</span>
+          <div className="home-progress-track">
+            <motion.i animate={{ scaleY: (active + 1) / N, scaleX: (active + 1) / N }} transition={{ duration: 0.8, ease }} />
+          </div>
+          <span>{pad(N)}</span>
         </div>
-        <span>SCROLL OR SELECT TO EXPLORE</span>
-      </footer>
+        <span className="home-hint">{grid ? "Select a project" : "Scroll · drag · use arrow keys"}</span>
+      </div>
+
+      <nav className="home-index" aria-label="Project index">
+        <span className="home-index-head">Project index</span>
+        <ol>
+          {projects.map((p, i) => (
+            <li key={p.slug}>
+              <button
+                aria-current={i === active ? "true" : undefined}
+                onClick={() => {
+                  if (state.current.gridTarget) toggleGrid(false);
+                  select(i);
+                }}
+                onMouseEnter={() => (state.current.hoverTarget = -1)}
+                data-cursor="Select"
+              >
+                <span className="home-index-n">{pad(i + 1)}</span>
+                <span className="home-index-label">{p.label}</span>
+                <span className="home-index-line" />
+              </button>
+            </li>
+          ))}
+        </ol>
+      </nav>
     </main>
   );
 }

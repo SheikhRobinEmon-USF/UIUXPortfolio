@@ -56,10 +56,16 @@ export default function PlayShell({ project: p, tour }: { project: Project; tour
   const [handheld, setHandheld] = useState(false);
   const [epoch, setEpoch] = useState(0);
   const [intro, setIntro] = useState(true);
+  const [embed, setEmbed] = useState(false);
 
   useEffect(() => {
-    const q = new URLSearchParams(location.search).get("view");
+    const params = new URLSearchParams(location.search);
+    const q = params.get("view");
     const small = matchMedia("(max-width: 700px)");
+    if (params.get("embed") === "1") {
+      setEmbed(true);
+      setIntro(false);
+    }
     setHandheld(small.matches);
     setView(q === "web" || q === "mobile" ? q : small.matches ? "mobile" : "web");
     const onChange = () => setHandheld(small.matches);
@@ -111,7 +117,7 @@ export default function PlayShell({ project: p, tour }: { project: Project; tour
   );
 
   return (
-    <main id="main" className={`play play-${p.slug} view-${view || "pending"} ${handheld ? "handheld" : ""}`} style={{ "--accent": p.color, "--accent-ink": p.ink } as React.CSSProperties}>
+    <main id="main" className={`play play-${p.slug} view-${view || "pending"} ${handheld && !embed ? "handheld" : ""} ${embed ? "embed" : ""}`} style={{ "--accent": p.color, "--accent-ink": p.ink } as React.CSSProperties}>
       <AnimatePresence>
         {intro && (
           <motion.div className="play-intro" style={{ background: p.ink, color: p.color }} exit={{ clipPath: "inset(0 0 100% 0)" }} transition={{ duration: 0.8, ease }} aria-hidden="true">
@@ -124,7 +130,7 @@ export default function PlayShell({ project: p, tour }: { project: Project; tour
           </motion.div>
         )}
       </AnimatePresence>
-      {bar}
+      {!embed && bar}
       {view === "web" && (
         <ToastHost key={`w${epoch}`} className="web-toasts">
           <App view="web" />
@@ -132,7 +138,7 @@ export default function PlayShell({ project: p, tour }: { project: Project; tour
       )}
       {view === "mobile" && (
         <div className="device-stage">
-          {!handheld && (
+          {!handheld && !embed && (
             <aside className="device-notes device-notes-left">
               <span className="device-kicker">{p.tag} · iOS concept</span>
               <h1>
@@ -153,19 +159,19 @@ export default function PlayShell({ project: p, tour }: { project: Project; tour
           )}
           <motion.div
             className="phone"
-            initial={handheld ? false : { y: 60, opacity: 0, rotateX: 8 }}
+            initial={handheld || embed ? false : { y: 60, opacity: 0, rotateX: 8 }}
             animate={{ y: 0, opacity: 1, rotateX: 0 }}
             transition={{ duration: 1, ease, delay: 0.25 }}
           >
             <div className="phone-screen">
-              {!handheld && <StatusBar />}
+              {(!handheld || embed) && <StatusBar />}
               <ToastHost key={`m${epoch}`} className="phone-toasts">
                 <App view="mobile" />
               </ToastHost>
-              {!handheld && <span className="phone-home" aria-hidden="true" />}
+              {(!handheld || embed) && <span className="phone-home" aria-hidden="true" />}
             </div>
           </motion.div>
-          {!handheld && (
+          {!handheld && !embed && (
             <aside className="device-notes device-notes-right">
               <h2>Mobile patterns</h2>
               <ul>

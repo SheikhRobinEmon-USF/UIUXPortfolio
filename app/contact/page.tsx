@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { route } from "../../lib/projects";
+import Cursor from "../../components/home/Cursor";
 
 export const metadata: Metadata = {
   title: "Connect · Sheikh Robin Emon",
@@ -28,8 +29,9 @@ const channels = [
 export default function Contact() {
   return (
     <main id="main" className="profile-page contact-page">
+      <Cursor />
       <header className="profile-nav">
-        <a href={route("/")}>Selected work</a>
+        <a href={route("/")}>← Selected work</a>
         <a href={route("/about/")}>About</a>
       </header>
       <section className="profile-layout">
