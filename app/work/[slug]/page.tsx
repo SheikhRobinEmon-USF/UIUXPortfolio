@@ -1,5 +1,230 @@
-import {existsSync} from 'node:fs';
-import {projects,route,asset} from '../../../lib/projects';
-import {notFound} from 'next/navigation';
-export function generateStaticParams(){return projects.map(p=>({slug:p.slug}))}
-export default async function Work({params}:{params:Promise<{slug:string}>}){const {slug}=await params;const p=projects.find(x=>x.slug===slug);if(!p)notFound();const next=projects[(projects.indexOf(p)+1)%7];return <main id="main" className="case" style={{'--paper':p.color,'--ink':p.ink} as React.CSSProperties}><header className="case-nav"><a href={route('/')}>← Selected work</a><a href={route('/play/'+slug+'/')}>Explore prototype ↗</a></header><section className="case-intro"><div className="eyebrow">CONCEPT 0{projects.indexOf(p)+1} / {p.tag}</div><h1>{p.name}<span>.</span></h1><h2>{p.line}</h2><div className="meta"><div><small>ROLE</small>Product design & frontend</div><div><small>SCOPE</small>Independent concept</div><div><small>PLATFORM</small>Responsive web</div><div><small>TOOLS</small>React / TypeScript / CSS</div></div><img className="case-hero" src={asset(slug+'.svg')} alt={`${p.name} concept artwork`}/></section><div className="case-body"><section><small>01 / THE PROBLEM</small><h2>{p.problem}</h2><p>{p.audience} are the intended audience. This self-initiated concept explores how a clearer interaction model can support their goals.</p></section><section><small>02 / OPPORTUNITY & RESEARCH ASSUMPTIONS</small><h2>Design for the decision, not just the screen.</h2><p>{p.hypothesis} This is a hypothesis, not a measured research result. Common category conventions inform the concept; no interviews, surveys, or recruited usability studies have been conducted.</p><aside><strong>Illustrative persona (hypothetical)</strong><p>{p.persona}</p></aside></section><section><small>03 / USER JOURNEY & INFORMATION ARCHITECTURE</small><h2>One clear path, room to explore.</h2><div className="flow">{p.flow.map((s,i)=><div key={s}><small>0{i+1}</small>{s}</div>)}</div><p>The primary journey is sequential, while the application navigation provides direct access to browsing, saved state and history where relevant.</p></section><section><small>04 / LOW-FIDELITY EXPLORATION</small><h2>From structure to interaction.</h2><div className="wireframes">{p.flow.slice(0,3).map(s=><div key={s}><div className="wire-top"/><div className="wire-box"/><div className="wire-line"/><div className="wire-line short"/><strong>{s}</strong></div>)}</div></section><section><small>05 / VISUAL IDENTITY</small><h2>A system built for {p.tag.toLowerCase()}.</h2><div className="swatches"><div style={{background:p.color,color:p.ink}}>{p.color}</div><div style={{background:p.ink,color:'white'}}>{p.ink}</div><div style={{background:'#f8f6f1',color:'#222'}}>#F8F6F1</div></div><p>Clear type hierarchy, 8px spacing increments, responsive grids, visible focus states, semantic controls and reduced-motion alternatives inform the design system.</p></section><section><small>06 / HIGH-FIDELITY EXPERIENCE</small><h2>Experience the real interface.</h2>{existsSync(`public/media/${slug}-screen.png`)?<img className="case-hero" src={asset(`${slug}-screen.png`)} alt={`Actual ${p.name} prototype screenshot`}/>:<p>Screenshot capture pending browser verification. Open the live prototype below to inspect the implemented interface.</p>}<p>{p.signature}</p><a className="primary-cta" href={route('/play/'+slug+'/')}>Explore interactive prototype ↗</a></section><section><small>07 / DESIGN DECISIONS</small><h2>Intentional tradeoffs.</h2><p>{p.tradeoff}</p></section><section><small>08 / VALIDATION, RESULTS & REFLECTION</small><h2>A concept to test, not a claim of impact.</h2><p>The implementation is a local frontend simulation with synthetic data. Automated checks are documented in the repository. No customer outcomes, business metrics, or clinical or financial validity are claimed. Next: recruit representative users and test task success, comprehension, accessibility and confidence.</p></section></div><a className="next-case" href={route('/work/'+next.slug+'/')}><small>NEXT PROJECT ↗</small><strong>{next.name}.</strong></a></main>}
+import { existsSync } from "node:fs";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { caseStudies } from "../../../lib/case-studies";
+import { projects, route, asset, projectArtwork } from "../../../lib/projects";
+
+type WorkProps = { params: Promise<{ slug: string }> };
+
+export function generateStaticParams() {
+  return projects.map(({ slug }) => ({ slug }));
+}
+
+export async function generateMetadata({
+  params,
+}: WorkProps): Promise<Metadata> {
+  const { slug } = await params;
+  const project = projects.find((item) => item.slug === slug);
+  if (!project) return {};
+  return {
+    title: `${project.name} · Sheikh Robin Emon`,
+    description: caseStudies[project.slug].concept,
+  };
+}
+
+export default async function Work({ params }: WorkProps) {
+  const { slug } = await params;
+  const project = projects.find((item) => item.slug === slug);
+  if (!project) notFound();
+  const content = caseStudies[project.slug];
+  const next = projects[(projects.indexOf(project) + 1) % projects.length];
+  const prototype = route(`/play/${slug}/`);
+  const workIndex = route(`/?project=${slug}`);
+  const shots = [
+    { file: `${slug}-screen.jpg`, caption: `${project.name} landing screen` },
+    { file: `${slug}-detail.jpg`, caption: content.capture },
+  ].filter((shot) => existsSync(`public/media/${shot.file}`));
+
+  return (
+    <main
+      id="main"
+      className="case"
+      style={
+        {
+          "--paper": project.color,
+          "--ink": project.ink,
+        } as React.CSSProperties
+      }
+    >
+      <header className="case-nav">
+        <a href={workIndex}>Selected work</a>
+        <a href={prototype}>Launch prototype</a>
+      </header>
+      <section className="case-intro" aria-labelledby="case-title">
+        <div className="case-lead">
+          <div>
+            <p className="eyebrow">{project.tag} · Independent concept</p>
+            <h1 id="case-title">
+              {project.name}
+              <span>.</span>
+            </h1>
+            <p className="case-strapline">{project.line}</p>
+          </div>
+          <div className="case-lead-details">
+            <p>{content.concept}</p>
+            <a className="primary-cta" href={prototype}>
+              Explore interactive prototype
+            </a>
+          </div>
+        </div>
+        <img
+          className="case-hero hero-artwork"
+          {...projectArtwork(slug)}
+          sizes="88vw"
+          alt=""
+          width="900"
+          height="510"
+          fetchPriority="high"
+        />
+        <dl className="meta">
+          <div>
+            <dt>Role</dt>
+            <dd>Product design, interaction & frontend</dd>
+          </div>
+          <div>
+            <dt>Scope</dt>
+            <dd>Independent product concept</dd>
+          </div>
+          <div>
+            <dt>Platform</dt>
+            <dd>Responsive web</dd>
+          </div>
+          <div>
+            <dt>Tools</dt>
+            <dd>Next.js, React, TypeScript, CSS</dd>
+          </div>
+        </dl>
+      </section>
+
+      <div className="case-body">
+        <section>
+          <p className="eyebrow">The problem</p>
+          <h2>{project.problem}</h2>
+          <p>{project.audience}</p>
+          <h3>Product opportunity</h3>
+          <p>{content.opportunity}</p>
+        </section>
+        <section>
+          <p className="eyebrow">Research and assumptions</p>
+          <h2>What informed the approach</h2>
+          <p>{content.pattern}</p>
+          <p>
+            <a className="source-link" href={content.source[1]}>
+              {content.source[0]}
+            </a>
+          </p>
+          <h3>Design hypothesis</h3>
+          <p>{project.hypothesis}</p>
+          <aside>
+            <strong>Hypothetical persona</strong>
+            <p>{project.persona}</p>
+          </aside>
+        </section>
+        <section>
+          <p className="eyebrow">User journey</p>
+          <h2>How the main task flows</h2>
+          <ol className="flow" role="list">
+            {project.flow.map((step, index) => (
+              <li key={step}>
+                <small>{String(index + 1).padStart(2, "0")}</small>
+                {step}
+              </li>
+            ))}
+          </ol>
+          <h3>Information architecture</h3>
+          <ul className="case-list">
+            {content.architecture.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </section>
+        <section>
+          <p className="eyebrow">Wireframes</p>
+          <h2>Screen structure</h2>
+          <div className="wireframes">
+            {content.frames.map((frame) => (
+              <figure key={frame.title}>
+                <div className="wire-page">
+                  {frame.rows.map((row, index) => (
+                    <div className="wire-row" key={index}>
+                      {row.map((block) => (
+                        <span key={block}>{block}</span>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                <figcaption>{frame.title}</figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+        <section>
+          <p className="eyebrow">Visual identity</p>
+          <h2>The {project.name} design system</h2>
+          <div className="swatches">
+            <div style={{ background: project.color, color: project.ink }}>
+              {project.color.toUpperCase()}
+            </div>
+            <div style={{ background: project.ink, color: "white" }}>
+              {project.ink.toUpperCase()}
+            </div>
+            <div style={{ background: "#faf7ed", color: "#222" }}>#FAF7ED</div>
+          </div>
+          <p>{content.identity}</p>
+        </section>
+        <section>
+          <p className="eyebrow">High-fidelity screens</p>
+          <h2>The implemented experience</h2>
+          <div className="case-screens">
+            {shots.map((shot) => (
+              <figure key={shot.file}>
+                <img
+                  src={asset(shot.file)}
+                  alt={shot.caption}
+                  width="1440"
+                  height="900"
+                  loading="lazy"
+                />
+                <figcaption>{shot.caption}</figcaption>
+              </figure>
+            ))}
+          </div>
+          {!shots.length && (
+            <p>The interactive prototype is available below.</p>
+          )}
+          <h3>Signature interaction</h3>
+          <p>{project.signature}</p>
+          <h3>Design decision</h3>
+          <p>{project.tradeoff}</p>
+        </section>
+        <section>
+          <p className="eyebrow">Validation and results</p>
+          <h2>What the prototype demonstrates</h2>
+          <p>{content.result}</p>
+          <p>
+            Browser tests exercise the main journey, local persistence and
+            responsive widths. The personas and design hypotheses are
+            illustrative. This is an independent concept with no recruited
+            usability study or business results.
+          </p>
+          <h3>Reflection and what to test next</h3>
+          <p>{content.reflection}</p>
+          <a className="primary-cta" href={prototype}>
+            Open {project.name} demo
+          </a>
+        </section>
+      </div>
+      <a className="next-case" href={route(`/work/${next.slug}/`)}>
+        <small>Next project · {next.tag}</small>
+        <strong>{next.name}.</strong>
+        <img
+          src={asset(next.slug + ".webp")}
+          alt=""
+          width="720"
+          height="360"
+          loading="lazy"
+        />
+      </a>
+    </main>
+  );
+}

@@ -1,12 +1,206 @@
 export const projects = [
- {slug:'ecommerce',label:'E-COMMERCE',name:'ATELIER',line:'Objects for a quieter life.',tag:'Editorial commerce',color:'#d7c5a9',ink:'#302b23',problem:'Finding something beautiful often takes too many steps and comparisons.',audience:'Intentional shoppers seeking everyday objects with lasting value.',hypothesis:'Material-led photography and persistent cart context may reduce decision friction.',persona:'Maya, 29, wants to compare materials and sizes without losing her place.',flow:['Discover','Filter & search','Choose variant','Review bag','Checkout','Confirmation'],signature:'A product expands into an editorial detail view; material and size stay visible throughout purchase.',tradeoff:'A curated catalogue trades breadth for clarity. Filters remain available for intentional search.'},
- {slug:'social',label:'SOCIAL',name:'COMMON',line:'Find your kind of people.',tag:'Creative communities',color:'#e5ed82',ink:'#182b26',problem:'High-volume feeds can make meaningful participation feel like work.',audience:'Creatives looking for small, supportive communities.',hypothesis:'Topic-first discovery and a low-pressure composer may encourage thoughtful contributions.',persona:'Alex, 24, wants feedback on a new illustration and a community that shares their interests.',flow:['Browse feed','Explore community','Compose','Publish','Discuss','Save'],signature:'A focused composer adds a new contribution directly to the feed.',tradeoff:'Community filters give users control rather than hiding content behind an opaque ranking.'},
- {slug:'streaming',label:'STREAMING',name:'FRAME',line:'Stories worth staying in for.',tag:'Cinematic discovery',color:'#9a9dc7',ink:'#171923',problem:'Choosing what to watch can become more time-consuming than watching.',audience:'Viewers looking for a clear editorial recommendation.',hypothesis:'A cinematic featured title paired with concise metadata may aid faster selection.',persona:'Sam, 31, has one free evening and wants a documentary.',flow:['Browse shelves','Select genre','Open title','Watch','Resume','Save'],signature:'Poster-to-detail transition and a real local sample player.',tradeoff:'Fewer shelves preserve editorial impact while search supports directed discovery.'},
- {slug:'health',label:'HEALTH',name:'VITAL',line:'Small steps. Better days.',tag:'Personal wellness',color:'#afceb3',ink:'#173d35',problem:'Wellness data can feel overwhelming and judgmental.',audience:'People building sustainable daily routines.',hypothesis:'A daily timeline and nonjudgmental progress indicators may make logging feel approachable.',persona:'Jordan, 34, wants to build small habits around sleep and activity.',flow:['Review today','Log activity','Track habits','Set goals','Explore trends','Reflect'],signature:'Date-specific wellness timeline and responsive progress bars.',tradeoff:'Simple synthetic summaries favor comprehension over clinical detail.'},
- {slug:'finance',label:'FINANCE',name:'MONETA',line:'Make room for what matters.',tag:'Personal finance',color:'#bdc8ed',ink:'#172947',problem:'Transaction lists rarely provide a clear connection to spending goals.',audience:'People who want to understand and plan their spending.',hypothesis:'Linked summaries and budget editing can make the impact of spending choices more legible.',persona:'Taylor, 27, wants to see where money goes and save for a trip.',flow:['Review overview','Filter transactions','Inspect spending','Edit budget','Create goal','Review'],signature:'Connected totals and charts change with range and category.',tradeoff:'A compact dashboard provides drill-down instead of displaying every detail at once.'},
- {slug:'food',label:'FOOD',name:'CRAVE',line:'Good food, closer.',tag:'Local food delivery',color:'#f3a45d',ink:'#4a2319',problem:'Unclear customization and delivery estimates create uncertainty at checkout.',audience:'Busy diners seeking a quick, transparent order.',hypothesis:'Visible meal extras, totals and status milestones may increase confidence.',persona:'Riley, 26, wants dinner delivered after work with specific toppings.',flow:['Discover restaurants','Select cuisine','Open menu','Customize','Checkout','Track'],signature:'Meal customization updates the order total immediately, followed by simulated tracking.',tradeoff:'A simple staged timeline is more honest than a fake live tracking map.'},
- {slug:'stays',label:'STAYS',name:'ROAM',line:'Somewhere feels like you.',tag:'Slow travel & stays',color:'#e0c4ac',ink:'#352d23',problem:'Travelers need to compare location, availability and prices without losing context.',audience:'Independent travelers looking for distinctive stays.',hypothesis:'Linked map and list views plus transparent nightly pricing may support confident booking.',persona:'Casey, 32, wants a peaceful weekend for two with a clear budget.',flow:['Search destination','Choose dates','Compare map','Open stay','Review price','Reserve'],signature:'Linked property cards and schematic map markers with date-aware pricing.',tradeoff:'A labeled illustrative map keeps the demo deterministic without pretending to offer live geographic data.'},
+  {
+    slug: "ecommerce",
+    label: "E-COMMERCE",
+    name: "ATELIER",
+    line: "Objects for a quieter life.",
+    tag: "Editorial commerce",
+    color: "#d7c5a9",
+    ink: "#302b23",
+    problem:
+      "Finding something beautiful often takes too many steps and comparisons.",
+    audience:
+      "Intentional shoppers seeking everyday objects with lasting value.",
+    hypothesis:
+      "Material-led photography and persistent cart context may reduce decision friction.",
+    persona:
+      "Maya, 29, wants to compare materials and sizes without losing her place.",
+    flow: [
+      "Discover",
+      "Filter & search",
+      "Choose variant",
+      "Review bag",
+      "Checkout",
+      "Confirmation",
+    ],
+    signature:
+      "A product expands into an editorial detail view. Material and size stay visible throughout checkout.",
+    tradeoff:
+      "A curated catalogue trades breadth for clarity. Filters remain available for intentional search.",
+  },
+  {
+    slug: "social",
+    label: "SOCIAL",
+    name: "COMMON",
+    line: "Find your kind of people.",
+    tag: "Creative communities",
+    color: "#e5ed82",
+    ink: "#182b26",
+    problem:
+      "High-volume feeds can make meaningful participation feel like work.",
+    audience: "Creatives looking for small, supportive communities.",
+    hypothesis:
+      "Topic-first discovery and a low-pressure composer may encourage thoughtful contributions.",
+    persona:
+      "Alex, 24, wants feedback on a new illustration and a community that shares their interests.",
+    flow: [
+      "Browse feed",
+      "Explore community",
+      "Compose",
+      "Publish",
+      "Discuss",
+      "Save",
+    ],
+    signature:
+      "A focused composer adds a new contribution directly to the feed.",
+    tradeoff:
+      "Community filters give users control rather than hiding content behind an opaque ranking.",
+  },
+  {
+    slug: "streaming",
+    label: "STREAMING",
+    name: "FRAME",
+    line: "Stories worth staying in for.",
+    tag: "Cinematic discovery",
+    color: "#9a9dc7",
+    ink: "#171923",
+    problem:
+      "Choosing what to watch can become more time-consuming than watching.",
+    audience: "Viewers looking for a clear editorial recommendation.",
+    hypothesis:
+      "A cinematic featured title paired with concise metadata may aid faster selection.",
+    persona: "Sam, 31, has one free evening and wants a documentary.",
+    flow: [
+      "Browse shelves",
+      "Select genre",
+      "Open title",
+      "Watch",
+      "Resume",
+      "Save",
+    ],
+    signature: "Poster-to-detail transition and a real local sample player.",
+    tradeoff:
+      "Fewer shelves preserve editorial impact while search supports directed discovery.",
+  },
+  {
+    slug: "health",
+    label: "HEALTH",
+    name: "VITAL",
+    line: "Small steps. Better days.",
+    tag: "Personal wellness",
+    color: "#afceb3",
+    ink: "#173d35",
+    problem: "Wellness data can feel overwhelming and judgmental.",
+    audience: "People building sustainable daily routines.",
+    hypothesis:
+      "A daily timeline and nonjudgmental progress indicators may make logging feel approachable.",
+    persona:
+      "Jordan, 34, wants to build small habits around sleep and activity.",
+    flow: [
+      "Review today",
+      "Log activity",
+      "Track habits",
+      "Set goals",
+      "Explore trends",
+      "Reflect",
+    ],
+    signature: "Date-specific wellness timeline and responsive progress bars.",
+    tradeoff:
+      "Simple synthetic summaries favor comprehension over clinical detail.",
+  },
+  {
+    slug: "finance",
+    label: "FINANCE",
+    name: "MONETA",
+    line: "Make room for what matters.",
+    tag: "Personal finance",
+    color: "#bdc8ed",
+    ink: "#172947",
+    problem:
+      "Transaction lists rarely provide a clear connection to spending goals.",
+    audience: "People who want to understand and plan their spending.",
+    hypothesis:
+      "Linked summaries and budget editing can make the impact of spending choices more legible.",
+    persona: "Taylor, 27, wants to see where money goes and save for a trip.",
+    flow: [
+      "Review overview",
+      "Filter transactions",
+      "Inspect spending",
+      "Edit budget",
+      "Create goal",
+      "Review",
+    ],
+    signature: "Connected totals and charts change with range and category.",
+    tradeoff:
+      "A compact dashboard provides drill-down instead of displaying every detail at once.",
+  },
+  {
+    slug: "food",
+    label: "FOOD",
+    name: "CRAVE",
+    line: "Good food, closer.",
+    tag: "Local food delivery",
+    color: "#f3a45d",
+    ink: "#4a2319",
+    problem:
+      "Unclear customization and delivery estimates create uncertainty at checkout.",
+    audience: "Busy diners seeking a quick, transparent order.",
+    hypothesis:
+      "Visible meal extras, totals and status milestones may increase confidence.",
+    persona:
+      "Riley, 26, wants dinner delivered after work with specific toppings.",
+    flow: [
+      "Discover restaurants",
+      "Select cuisine",
+      "Open menu",
+      "Customize",
+      "Checkout",
+      "Track",
+    ],
+    signature:
+      "Meal customization updates the order total immediately, followed by simulated tracking.",
+    tradeoff:
+      "A simple staged timeline is more honest than a fake live tracking map.",
+  },
+  {
+    slug: "stays",
+    label: "STAYS",
+    name: "ROAM",
+    line: "Somewhere feels like you.",
+    tag: "Slow travel & stays",
+    color: "#e0c4ac",
+    ink: "#352d23",
+    problem:
+      "Travelers need to compare location, availability and prices without losing context.",
+    audience: "Independent travelers looking for distinctive stays.",
+    hypothesis:
+      "Linked map and list views plus transparent nightly pricing may support confident booking.",
+    persona: "Casey, 32, wants a peaceful weekend for two with a clear budget.",
+    flow: [
+      "Search destination",
+      "Choose dates",
+      "Compare map",
+      "Open stay",
+      "Review price",
+      "Reserve",
+    ],
+    signature:
+      "Linked property cards and schematic map markers with date-aware pricing.",
+    tradeoff:
+      "A labeled illustrative map keeps the demo deterministic without pretending to offer live geographic data.",
+  },
 ] as const;
-export type Project = typeof projects[number];
-export const asset=(name:string)=>`${process.env.NEXT_PUBLIC_BASE_PATH||''}/media/${name}`;
-export const route=(path:string)=>`${process.env.NEXT_PUBLIC_BASE_PATH||''}${path}`;
+export type Project = (typeof projects)[number];
+export const asset = (name: string) =>
+  `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/media/${name}`;
+export const route = (path: string) =>
+  `${process.env.NEXT_PUBLIC_BASE_PATH || ""}${path}`;
+
+export function projectArtwork(slug: string) {
+  const src = asset(slug + ".webp");
+  const width = ["finance", "food", "stays"].includes(slug) ? 762 : 881;
+  return {
+    src,
+    srcSet: `${asset(slug + "-mobile.webp")} 460w, ${src} ${width}w`,
+  };
+}
