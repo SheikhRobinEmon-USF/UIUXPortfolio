@@ -288,7 +288,7 @@ export function Segmented<T extends string>({
   label,
   className = "",
 }: {
-  options: readonly (T | { value: T; label: ReactNode })[];
+  options: readonly (NoInfer<T> | { value: NoInfer<T>; label: ReactNode })[];
   value: T;
   onChange: (v: T) => void;
   label: string;
