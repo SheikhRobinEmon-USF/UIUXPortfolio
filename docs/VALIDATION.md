@@ -25,4 +25,4 @@ The prototype's accessibility findings (icon-only demo-bar controls on phones la
 
 ## Evidence
 
-- Case-study captures: `public/media/cases/<slug>-web-1.jpg … mobile-3.jpg` (regenerate with `npm run capture:screens`).
+- Case-study captures: `source/public/media/cases/<slug>-web-1.jpg … mobile-3.jpg` (regenerate with `npm run capture:screens`).
