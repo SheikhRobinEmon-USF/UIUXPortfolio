@@ -1,0 +1,8 @@
+:HL["/UIUXPortfolio/_next/static/chunks/1mo7r8y15hida.css","style"]
+:HL["/UIUXPortfolio/_next/static/chunks/3m41df3rm025t.css","style"]
+:HL["/UIUXPortfolio/fonts/manrope.woff2","font",{"crossOrigin":"anonymous","type":"font/woff2"}]
+:HL["/UIUXPortfolio/fonts/instrument-serif.woff2","font",{"crossOrigin":"anonymous","type":"font/woff2"}]
+3:[["children",{"s":"__PAGE__","h":160}]]
+2:[["children",{"s":{"n":"slug","t":"d","k":"streaming","s":[]},"h":96,"c":"$Q3"}]]
+1:[["children",{"s":"play","h":96,"c":"$Q2"}]]
+0:{"b":"0w8uPTOKCQYOb9wO7IkUp","t":{"t":{"s":"","h":80,"c":"$Q1"}}}

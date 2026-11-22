@@ -1,59 +1,65 @@
-# Sheikh Robin Emon · Selected work
+# Sheikh Robin Emon · UI/UX Portfolio
 
-A standalone design portfolio with seven independent case studies and working, browser-local prototypes.
+**Live site: https://sheikhrobinemon-usf.github.io/UIUXPortfolio/**
 
-## Run locally
+Seven product-design case studies. Every one ships with a **complete, interactive web app and a native-style mobile app** that share the same data — add something on the phone and it appears on the web.
 
-Use Node.js 24 and npm.
+![Portfolio home page](docs/home-desktop.jpg)
+
+## View it
+
+- **Online:** https://sheikhrobinemon-usf.github.io/UIUXPortfolio/
+- **A project directly:** `…/UIUXPortfolio/work/<slug>/` for the case study, `…/UIUXPortfolio/play/<slug>/?view=web` or `?view=mobile` for the prototypes.
+- **On your computer:** the site in this folder is built for the `/UIUXPortfolio/` path, so serve the repository's parent folder (for example `npx serve ..` from the repository) and open `/UIUXPortfolio/`, or run the source locally (below).
+
+| Slug | Product | Web | Mobile app |
+| --- | --- | --- | --- |
+| [ecommerce](https://sheikhrobinemon-usf.github.io/UIUXPortfolio/work/ecommerce/) | ATELIER · Editorial commerce | Shop, filters, product detail, bag, 3-step checkout, tracking, returns | Stories, search, option sheet, swipe-to-pay, orders |
+| [social](https://sheikhrobinemon-usf.github.io/UIUXPortfolio/work/social/) | COMMON · Creative communities | Onboarding, feed scopes, critique posts, polls, composer, circles, DMs | Stories, double-tap like, comment sheet, create tab, chat |
+| [streaming](https://sheikhrobinemon-usf.github.io/UIUXPortfolio/work/streaming/) | FRAME · Cinematic discovery | Profiles, autoplay hero, hover previews, episodes, custom player | New & Hot, vertical clips, downloads, landscape player |
+| [health](https://sheikhrobinemon-usf.github.io/UIUXPortfolio/work/health/) | VITAL · Personal wellness | Rings, heart, sleep stages, nutrition, breathing, habits, trends, journal | Live workout, breathing, water, habits, night-mode sleep |
+| [finance](https://sheikhrobinemon-usf.github.io/UIUXPortfolio/work/finance/) | MONETA · Personal finance | Net worth, transactions, budgets, subscriptions, goals, cards, transfers | Keypad pay with Face ID step, card carousel, plan |
+| [food](https://sheikhrobinemon-usf.github.io/UIUXPortfolio/work/food/) | CRAVE · Local food delivery | Scroll-synced menu, required options, fees, live tracking, chat, rating | Collapsing header, dish sheet, cart bar, swipe to order, map sheet |
+| [stays](https://sheikhrobinemon-usf.github.io/UIUXPortfolio/work/stays/) | ROAM · Slow travel & stays | Range calendar, linked map/list, price histogram, booking, trips, wishlists | Stepped search, map rail, swipe galleries, reserve bar, trips |
+
+## What is in it
+
+- **WebGL project slider.** A hand-written WebGL renderer bends each project plane with scroll velocity, splits colour channels in motion and ripples under the pointer. Wheel, drag, swipe and arrow keys; `G` opens an overview grid.
+- **Cinematic transitions.** A loader tied to real image loading, letter-by-letter titles, a colour wash per project, a custom cursor and an image that expands into the case study.
+- **Case studies** with smooth scroll, scroll-lit text, both prototypes embedded live, a pinned journey of every flow, key screens, wireframes, the visual system, and a scroll-to-continue handoff to the next project.
+- **Fourteen apps.** Each product has its own brand, type and motion language, and a web and mobile app with long, complete flows. Fictional data lives in the browser; **Reset demo** restores it.
+- **Accessible and responsive.** Keyboard support, labelled controls, reduced-motion fallbacks, and layouts tested from 320 to 1920 px.
+
+## Folder structure
+
+```
+/                 ← the published static site (served by GitHub Pages)
+  index.html, 404.html, .nojekyll, _next/, media/, fonts/
+  work/<slug>/    case studies
+  play/<slug>/    web + mobile prototypes
+  about/, contact/
+source/           ← Next.js source (app/, components/, lib/, public/, scripts/, tests/)
+docs/             ← plan, research, design systems, status, validation
+```
+
+## Edit and publish
 
 ```sh
+cd source
 npm ci
-npm run dev
+npm run dev        # http://localhost:3000
+npm run publish    # builds and replaces the site at the repository root
 ```
 
-Development runs at http://localhost:3000. For a production preview, run `npm run build` and `npm run preview`, then open http://localhost:4173. The static site is generated in `out/`.
+Commit and push the result to `main`; GitHub Pages (Settings → Pages → Deploy from a branch → `main` / `(root)`) serves it.
 
-| Slug | Project |
-| --- | --- |
-| ecommerce | ATELIER · Editorial commerce |
-| social | COMMON · Creative communities |
-| streaming | FRAME · Cinematic discovery |
-| health | VITAL · Personal wellness |
-| finance | MONETA · Personal finance |
-| food | CRAVE · Local food delivery |
-| stays | ROAM · Slow travel and stays |
-
-The homepage is `/`. See `/about/` and `/contact/` for the designer profile and contact. Each project has a `/work/<slug>/` case study and a `/play/<slug>/` prototype. Each route supports direct visits and refreshes.
-
-Each prototype uses fictional data and client-side state. **Reset demo data** restores the current prototype. The demos require no accounts or API keys. Purchases, transfers, messages, delivery events and reservations are local simulations.
-
-## Verification
-
-```sh
-npm run build
-npm run test:static
-npx playwright install chromium
-npm test
-npm run build
-```
-
-Playwright verifies the product flows and refresh/persistence behavior, runs axe scans and captures the browser screenshots used by the case studies. The final build incorporates new captures. The seven target widths are 320, 375, 430, 768, 1024, 1440 and 1920 px. Set `CHROMIUM_PATH` if using a system Chromium instead of the Playwright-managed browser.
-
-Run `npm run audit` with `CHROMIUM_PATH` set if needed for the mobile Lighthouse audit. Pass paths to audit particular routes, for example `npm run audit -- / /work/stays/`. Raw reports go to `test-results/lighthouse/` by default.
-
-Run `npm run capture:motion` after installing Playwright Chromium to regenerate the project transition recording in `docs/`.
-
-## Media and hosting
-
-All illustrative photos and graphics are original or generated for the project. FRAME includes twelve short, locally served original motion studies with descriptive English captions. The case-study images are browser captures of working prototypes. Font license files are included under `public/fonts/`.
-
-The ChatGPT Sites manifest deploys the `out/` export. Optional `NEXT_PUBLIC_BASE_PATH=/UIUXPortfolio npm run build` configures static links for subdirectory hosting.
+Tests: `npm run test:static` and `npm test` (Playwright) from `source/`. See [validation](docs/VALIDATION.md).
 
 ## Documentation
 
-- [Master plan](MASTER_PLAN.md)
-- [Reference analysis](REFERENCE_ANALYSIS.md)
-- [Product design research for the seven demos](docs/PRODUCT_DESIGN_RESEARCH.md)
-- [Design systems](DESIGN_SYSTEM.md)
-- [Project status](PROJECT_STATUS.md)
-- [Validation results and captures](docs/VALIDATION.md)
+- [Master plan](docs/MASTER_PLAN.md) · [Reference analysis](docs/REFERENCE_ANALYSIS.md) · [Product design research](docs/PRODUCT_DESIGN_RESEARCH.md)
+- [Design systems](docs/DESIGN_SYSTEM.md) · [Project status](docs/PROJECT_STATUS.md) · [Validation](docs/VALIDATION.md)
+
+## Licence
+
+MIT for the code. Fonts are OFL (licences in `source/public/fonts/`). All data and people in the prototypes are fictional.

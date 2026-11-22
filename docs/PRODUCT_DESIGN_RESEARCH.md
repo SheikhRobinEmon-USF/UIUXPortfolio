@@ -25,3 +25,17 @@ The demos use local fixtures for inventory, locations, orders, viewing history, 
 | **MONETA** | Pair the animated category breakdown with the transactions behind it. Right-align transaction amounts with tabular numerals to simplify comparison. [Monarch reports](https://help.monarch.com/hc/en-us/articles/21846787088916-Using-Reports) |
 | **CRAVE** | Make the delivery estimate and active step prominent. The step sequence adapts from four columns to a compact grid or a vertical list, and the newly active step animates as the order advances. [DoorDash delivery stages](https://help.doordash.com/en-us/consumers/article/customer-where-is-my-order?ctry=US) |
 | **ROAM** | Use the same total on map pins and property cards for valid dates. Keep the nightly rate filter explicit, and link active pins to the matching result. [Airbnb total-price rollout](https://news.airbnb.com/total-price-display-is-now-standard-globally) · [Price display across search and the map](https://news.airbnb.com/airbnb-is-introducing-total-price-display-and-updating-guest-checkout) |
+
+## Web and mobile split (November 2026 rebuild)
+
+Each product now has two first-class platforms that share data but not layout:
+
+| Product | Web emphasises | Mobile emphasises |
+| --- | --- | --- |
+| ATELIER | Filters, comparison, hover zoom, multi-step checkout | Stories, thumb-zone add to bag, option sheet, swipe-to-pay |
+| COMMON | Three-column feed, threaded critique, composer with uploads | Stories, double-tap, comment sheet, centre create |
+| FRAME | Hover previews, keyboard player, Top 5 | Vertical clips, downloads, landscape player |
+| VITAL | Dashboards, heatmaps, trend scrubbing | One-tap logging, live workout, breathing |
+| MONETA | Tables, drawers, budgets and reports | Keypad, biometric confirmation, card carousel |
+| CRAVE | Scroll-synced menu, side cart, fee explanations | Collapsing header, cart bar, map sheet |
+| ROAM | Linked map/list, mosaic, reserve card | Stepped search, map rail, sticky reserve bar |
